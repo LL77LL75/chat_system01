@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Room</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Chat Room</h1>
+    <button id="accountBtn">Account</button>
+    <div id="accountMenu" class="hidden">
+      <button id="settingsBtn">Settings</button>
+      <button id="changeTitleBtn">Change Title</button>
+      <button id="logoutBtn">Logout</button>
+    </div>
+    <button id="leaveBtn">Leave Chat</button>
+  </header>
+
+  <main>
+    <section id="chat-section">
+      <div id="chatBox"></div>
+      <input type="text" id="msgInput" placeholder="Type your message..." />
+      <button id="sendBtn">Send</button>
+    </section>
+  </main>
+
+  <script>
+    const dbRef = firebase.database().ref();
+    const currentUser = localStorage.getItem('chatUser');
+    const currentRank = localStorage.getItem('chatRank') || 'newbie';
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomCode = urlParams.get('room');
+
+    if (!currentUser) {
+      window.location = 'index.html';
+    }
+
+    document.getElementById('accountBtn').onclick = () => {
+      document.getElementById('accountMenu').classList.toggle('hidden');
+    };
+
+    document.getElementById('logoutBtn').onclick = () => {
+      localStorage.removeItem('chatUser');
+      localStorage.removeItem('chatRank');
+      window.location = 'index.html';
+    };
+
+  </script>
+</body>
+</html>
+ 

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat App – Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Dashboard</h1>
+    <button id="accountBtn">Account</button>
+    <div id="accountMenu" class="hidden">
+      <button id="settingsBtn">Settings</button>
+      <button id="logoutBtn">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="rooms-section">
+      <h2>Available Rooms</h2>
+      <ul id="roomList"></ul>
+      <div id="adminRoomControls" class="hidden">
+        <input type="text" id="newRoomCode" placeholder="Enter room code">
+        <button id="createRoomBtn">Create / Join Room</button>
+        <button id="deleteRoomBtn">Delete Room</button>
+      </div>
+    </section>
+
+    <section id="moderation-panel" class="hidden">
+      <h2>Moderation Panel</h2>
+      <div>
+        <h3>Banned Users</h3>
+        <ul id="bannedList"></ul>
+      </div>
+      <div>
+        <h3>Muted Users</h3>
+        <ul id="mutedList"></ul>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const dbRef = firebase.database().ref();
+
+    const accountBtn = document.getElementById('accountBtn');
+    const accountMenu = document.getElementById('accountMenu');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    const roomListEl = document.getElementById('roomList');
+    const newRoomCodeInput = document.getElementById('newRoomCode');
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    const deleteRoomBtn = document.getElementById('deleteRoomBtn');
+    const adminRoomControls = document.getElementById('adminRoomControls');
+
+    const moderationPanel = document.getElementById('moderation-panel');
+    const bannedListEl = document.getElementById('bannedList');
+    const mutedListEl = document.getElementById('mutedList');
+
+    let currentUser = localStorage.getItem('chatUser');
+    let currentRank = localStorage.getItem('chatRank') || 'newbie';
+
+    if (!currentUser) {
+      window.location = 'index.html';
+    }
+
+    document.getElementById('rooms-section').querySelector('h2').innerText += ` (User: ${currentUser} / Rank: ${currentRank})`;
+
+    if (['admin', 'high', 'core'].includes(currentRank)) {
+      adminRoomControls.classList.remove('hidden');
+    }
+
+    accountBtn.onclick = () => accountMenu.classList.toggle('hidden');
+    logoutBtn.onclick = () => {
+      localStorage.removeItem('chatUser');
+      localStorage.removeItem('chatRank');
+      window.location = 'index.html';
+    };
+
+    settingsBtn.onclick = () => {
+      const newName = prompt('Enter new username:', currentUser);
+      if (newName && newName !== currentUser) {
+        dbRef.child('users').child(currentUser).get().then(snapshot => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            dbRef.child('users').child(newName).set(data).then(() => {
+              dbRef.child('users').child(currentUser).remove();
+              localStorage.setItem('chatUser', newName);
+              alert('Username changed. You are now: ' + newName);
+              location.reload();
+            });
+          }
+        });
+      }
+    };
+
+    createRoomBtn.onclick = () => {
+      const code = newRoomCodeInput.value.trim();
+      if (!code) return;
+      const roomRef = dbRef.child('rooms').child(code);
+      roomRef.get().then(snapshot => {
+        if (snapshot.exists()) {
+          window.location = `chat.html?room=${encodeURIComponent(code)}`;
+        } else {
+          roomRef.set({ createdBy: currentUser, messages: [], bans: [], mutes: [] })
+            .then(() => window.location = `chat.html?room=${encodeURIComponent(code)}`);
+        }
+      });
+    };
+
+    deleteRoomBtn.onclick = () => {
+      if (['admin', 'high', 'core'].includes(currentRank)) {
+        const code = newRoomCodeInput.value.trim();
+        if (!code) return;
+        dbRef.child('rooms').child(code).remove().then(() => {
+          alert('Room deleted: ' + code);
+        }).catch(err => {
+          alert('Error deleting room: ' + err.message);
+        });
+      } else {
+        alert('Permission denied');
+      }
+    };
+
+    dbRef.child('rooms').on('value', snapshot => {
+      const rooms = snapshot.val() || {};
+      roomListEl.innerHTML = '';
+      Object.keys(rooms).forEach(code => {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.innerText = `Join ${code}`;
+        btn.onclick = () => window.location = `chat.html?room=${encodeURIComponent(code)}`;
+        li.appendChild(btn);
+        roomListEl.appendChild(li);
+      });
+    });
+  </script>
+</body>
+</html>

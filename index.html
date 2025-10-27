@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat App – Login</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Welcome to Chat App</h1>
+  </header>
+
+  <main>
+    <section id="login-section">
+      <h2>Login</h2>
+      <form id="loginForm">
+        <input type="text" id="username" placeholder="Enter username" required>
+        <input type="password" id="password" placeholder="Enter password" required>
+        <button type="submit">Login</button>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const dbRef = firebase.database().ref();
+
+    document.getElementById('loginForm').onsubmit = function(event) {
+      event.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      if (!username || !password) {
+        alert('Please enter both username and password.');
+        return;
+      }
+
+      dbRef.child('users').child(username).get().then(snapshot => {
+        if (snapshot.exists()) {
+          const userData = snapshot.val();
+          if (userData.password === password) {
+            localStorage.setItem('chatUser', username);
+            localStorage.setItem('chatRank', userData.rank || 'newbie');
+            window.location = 'dashboard.html';
+          } else {
+            alert('Incorrect password.');
+          }
+        } else {
+          alert('Username not found.');
+        }
+      }).catch(error => {
+        console.error('Error fetching user data:', error);
+        alert('An error occurred. Please try again later.');
+      });
+    };
+  </script>
+</body>
+</html>
