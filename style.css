@@ -54,7 +54,6 @@ button:focus {
 
 /* Account Menu */
 #accountMenu {
-  display: none;
   position: absolute;
   top: 50px;
   right: 20px;
@@ -62,14 +61,16 @@ button:focus {
   border: 1px solid #ddd;
   border-radius: 5px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: none;
 }
 
 #accountMenu button {
   width: 100%;
-  border: none;
+  background-color: white;
+  color: #4CAF50;
   padding: 10px;
   text-align: left;
-  background-color: white;
+  border: none;
   font-size: 16px;
 }
 
@@ -86,6 +87,7 @@ main {
   padding: 20px;
 }
 
+/* Chat Section */
 #chat-section {
   width: 100%;
   max-width: 800px;

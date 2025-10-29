@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat App – Dashboard</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <script src="firebase-config.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js"></script>
+  <script type="module" src="firebase-config.js"></script>
 </head>
 <body>
   <header>
@@ -30,21 +30,19 @@
       </div>
     </section>
 
-    <section id="moderation-panel" class="hidden">
-      <h2>Moderation Panel</h2>
-      <div>
-        <h3>Banned Users</h3>
-        <ul id="bannedList"></ul>
-      </div>
-      <div>
-        <h3>Muted Users</h3>
-        <ul id="mutedList"></ul>
-      </div>
+    <section id="requests-section" class="hidden">
+      <h2>Registration Requests</h2>
+      <ul id="requestList"></ul>
     </section>
   </main>
 
-  <script>
-    const dbRef = firebase.database().ref();
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getDatabase, ref, get, set, remove, onValue } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+    import { firebaseConfig } from './firebase-config.js';
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
     const accountBtn = document.getElementById('accountBtn');
     const accountMenu = document.getElementById('accountMenu');
@@ -57,21 +55,14 @@
     const deleteRoomBtn = document.getElementById('deleteRoomBtn');
     const adminRoomControls = document.getElementById('adminRoomControls');
 
-    const moderationPanel = document.getElementById('moderation-panel');
-    const bannedListEl = document.getElementById('bannedList');
-    const mutedListEl = document.getElementById('mutedList');
+    const requestsSection = document.getElementById('requests-section');
+    const requestListEl = document.getElementById('requestList');
 
     let currentUser = localStorage.getItem('chatUser');
     let currentRank = localStorage.getItem('chatRank') || 'newbie';
 
     if (!currentUser) {
       window.location = 'index.html';
-    }
-
-    document.getElementById('rooms-section').querySelector('h2').innerText += ` (User: ${currentUser} / Rank: ${currentRank})`;
-
-    if (['admin', 'high', 'core'].includes(currentRank)) {
-      adminRoomControls.classList.remove('hidden');
     }
 
     accountBtn.onclick = () => accountMenu.classList.toggle('hidden');
@@ -81,52 +72,17 @@
       window.location = 'index.html';
     };
 
-    settingsBtn.onclick = () => {
-      const newName = prompt('Enter new username:', currentUser);
-      if (newName && newName !== currentUser) {
-        dbRef.child('users').child(currentUser).get().then(snapshot => {
-          if (snapshot.exists()) {
-            const data = snapshot.val();
-            dbRef.child('users').child(newName).set(data).then(() => {
-              dbRef.child('users').child(currentUser).remove();
-              localStorage.setItem('chatUser', newName);
-              alert('Username changed. You are now: ' + newName);
-              location.reload();
-            });
-          }
-        });
-      }
-    };
+    // Show controls based on rank
+    if (['admin','high','core','pioneer'].includes(currentRank)) {
+      adminRoomControls.classList.remove('hidden');
+    }
+    if (['core','pioneer'].includes(currentRank)) {
+      requestsSection.classList.remove('hidden');
+    }
 
-    createRoomBtn.onclick = () => {
-      const code = newRoomCodeInput.value.trim();
-      if (!code) return;
-      const roomRef = dbRef.child('rooms').child(code);
-      roomRef.get().then(snapshot => {
-        if (snapshot.exists()) {
-          window.location = `chat.html?room=${encodeURIComponent(code)}`;
-        } else {
-          roomRef.set({ createdBy: currentUser, messages: [], bans: [], mutes: [] })
-            .then(() => window.location = `chat.html?room=${encodeURIComponent(code)}`);
-        }
-      });
-    };
-
-    deleteRoomBtn.onclick = () => {
-      if (['admin', 'high', 'core'].includes(currentRank)) {
-        const code = newRoomCodeInput.value.trim();
-        if (!code) return;
-        dbRef.child('rooms').child(code).remove().then(() => {
-          alert('Room deleted: ' + code);
-        }).catch(err => {
-          alert('Error deleting room: ' + err.message);
-        });
-      } else {
-        alert('Permission denied');
-      }
-    };
-
-    dbRef.child('rooms').on('value', snapshot => {
+    // Load rooms list
+    const roomsRef = ref(db, 'rooms');
+    onValue(roomsRef, snapshot => {
       const rooms = snapshot.val() || {};
       roomListEl.innerHTML = '';
       Object.keys(rooms).forEach(code => {
@@ -138,6 +94,68 @@
         roomListEl.appendChild(li);
       });
     });
+
+    // Load registration requests
+    const reqRef = ref(db, 'registrationRequests');
+    onValue(reqRef, snapshot => {
+      const requests = snapshot.val() || {};
+      requestListEl.innerHTML = '';
+      Object.entries(requests).forEach(([username, info]) => {
+        if (info.status === "pending") {
+          const li = document.createElement('li');
+          li.innerText = `${username} — requested at ${new Date(info.requestedAt).toLocaleString()}`;
+          const approveBtn = document.createElement('button');
+          approveBtn.innerText = 'Approve';
+          approveBtn.onclick = async () => {
+            // Approve: move to users, set rank newbie
+            await set(ref(db, `users/${username}`), {
+              password: info.password,
+              rank: "newbie",
+              status: "active",
+              credits: 0,
+              titles: ["newcomer"]
+            });
+            await remove(ref(db, `registrationRequests/${username}`));
+            alert(`User ${username} approved.`);
+          };
+          const rejectBtn = document.createElement('button');
+          rejectBtn.innerText = 'Reject';
+          rejectBtn.onclick = async () => {
+            await remove(ref(db, `registrationRequests/${username}`));
+            alert(`User ${username} rejected.`);
+          };
+          li.appendChild(approveBtn);
+          li.appendChild(rejectBtn);
+          requestListEl.appendChild(li);
+        }
+      });
+    });
+
+    createRoomBtn.onclick = () => {
+      const code = newRoomCodeInput.value.trim();
+      if (!code) return;
+      const roomRef = ref(db, `rooms/${code}`);
+      get(roomRef).then(snapshot => {
+        if (snapshot.exists()) {
+          window.location = `chat.html?room=${encodeURIComponent(code)}`;
+        } else {
+          set(roomRef, { createdBy: currentUser, messages:{}, participants:{} })
+            .then(() => window.location = `chat.html?room=${encodeURIComponent(code)}`);
+        }
+      });
+    };
+
+    deleteRoomBtn.onclick = () => {
+      if (['admin','high','core','pioneer'].includes(currentRank)) {
+        const code = newRoomCodeInput.value.trim();
+        if (!code) return;
+        remove(ref(db, `rooms/${code}`))
+          .then(() => alert('Room deleted: ' + code))
+          .catch(err => alert('Error deleting room: ' + err.message));
+      } else {
+        alert('Permission denied');
+      }
+    };
   </script>
 </body>
 </html>

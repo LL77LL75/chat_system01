@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat Room</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <script src="firebase-config.js"></script>
 </head>
 <body>
   <header>
@@ -29,8 +26,15 @@
     </section>
   </main>
 
-  <script>
-    const dbRef = firebase.database().ref();
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getDatabase, ref, get, set, push, onValue, update } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+    import { firebaseConfig } from './firebase-config.js';
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const dbRef = path => ref(db, path);
     const currentUser = localStorage.getItem('chatUser');
     const currentRank = localStorage.getItem('chatRank') || 'newbie';
     const urlParams = new URLSearchParams(window.location.search);
@@ -50,7 +54,45 @@
       window.location = 'index.html';
     };
 
+    document.getElementById('changeTitleBtn').onclick = async () => {
+      const newTitle = prompt('Enter your new title:');
+      if (newTitle) {
+        const titlesSnap = await get(dbRef(`users/${currentUser}/titles`));
+        let titles = titlesSnap.exists() ? titlesSnap.val() : [];
+        titles.push(newTitle);
+        await update(dbRef(`users/${currentUser}`), { titles });
+        alert('Title added!');
+      }
+    };
+
+    document.getElementById('sendBtn').onclick = () => {
+      const text = document.getElementById('msgInput').value.trim();
+      if (!text) return;
+      const msgRef = push(dbRef(`rooms/${roomCode}/messages`));
+      set(msgRef, {
+        sender: currentUser,
+        content: text,
+        timestamp: Date.now(),
+        edited: false
+      });
+      document.getElementById('msgInput').value = '';
+    };
+
+    const chatBox = document.getElementById('chatBox');
+    onValue(dbRef(`rooms/${roomCode}/messages`), snapshot => {
+      chatBox.innerHTML = '';
+      const msgs = snapshot.val() || {};
+      Object.entries(msgs).forEach(([key, msg]) => {
+        const div = document.createElement('div');
+        div.textContent = `${msg.sender}: ${msg.content}${msg.edited ? " (edited)" : ""}`;
+        chatBox.appendChild(div);
+      });
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    document.getElementById('leaveBtn').onclick = () => {
+      window.location = 'dashboard.html';
+    };
   </script>
 </body>
 </html>
- 
