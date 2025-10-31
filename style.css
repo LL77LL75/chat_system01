@@ -1,102 +1,63 @@
+/* style.css */
+
 /* General Reset */
 *,
 *::before,
 *::after {
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
+  box‑sizing: border‑box;
 }
 
-/* Body Styling */
+/* Body styling */
 body {
-  font-family: 'Arial', sans-serif;
+  font-family: Arial, sans‑serif;
   background-color: #f4f4f9;
   color: #333;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
 }
 
-/* Header Styling */
+/* Header styling */
 header {
   background-color: #4CAF50;
-  color: white;
+  color: #fff;
   padding: 10px 20px;
-  text-align: center;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
-header h1 {
-  margin: 0;
-  font-size: 24px;
-}
-
-button {
-  background-color: #4CAF50;
+header nav a {
   color: white;
-  border: none;
-  padding: 10px 20px;
-  cursor: pointer;
-  font-size: 16px;
-  border-radius: 5px;
-  transition: background-color 0.3s;
+  text-decoration: none;
+  margin-left: 15px;
 }
 
-button:hover {
-  background-color: #45a049;
+header nav a:hover {
+  text-decoration: underline;
 }
 
-button:focus {
-  outline: none;
-}
-
-/* Account Menu */
-#accountMenu {
-  position: absolute;
-  top: 50px;
-  right: 20px;
-  background-color: white;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  display: none;
-}
-
-#accountMenu button {
-  width: 100%;
-  background-color: white;
-  color: #4CAF50;
-  padding: 10px;
-  text-align: left;
-  border: none;
-  font-size: 16px;
-}
-
-#accountMenu button:hover {
-  background-color: #f1f1f1;
-}
-
-/* Main Content */
+/* Main content */
 main {
   flex: 1;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px;
 }
 
-/* Chat Section */
+/* Chat section */
 #chat-section {
   width: 100%;
   max-width: 800px;
   background-color: white;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 #chatBox {
@@ -108,57 +69,116 @@ main {
 }
 
 #msgInput {
-  width: calc(100% - 80px);
+  width: calc(100% - 90px);
   padding: 10px;
   border: none;
   border-top: 1px solid #ddd;
   font-size: 16px;
-  border-radius: 5px 0 0 5px;
+  border-radius: 0 0 0 0;
 }
 
 #sendBtn {
-  width: 70px;
+  width: 80px;
   border: none;
   background-color: #4CAF50;
   color: white;
   font-size: 16px;
   cursor: pointer;
-  border-radius: 0 5px 5px 0;
 }
 
 #sendBtn:hover {
   background-color: #45a049;
 }
 
-#chatBox div {
+/* Moderation Panel */
+#moderation‑panel {
+  margin-top: 20px;
+  width: 100%;
+  max-width: 800px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  padding: 15px;
+}
+
+#moderation‑panel h3 {
   margin-bottom: 10px;
 }
 
-#chatBox div span {
-  font-weight: bold;
+#moderation‑panel h4 {
+  margin: 10px 0 5px;
 }
 
-#chatBox div span + span {
-  font-weight: normal;
-  color: #555;
+#moderation‑panel ul {
+  list-style‑type: none;
+  padding-left: 0;
 }
 
-/* Responsive Design */
+#moderation‑panel ul li {
+  padding: 5px 0;
+  border-bottom: 1px solid #eee;
+}
+
+/* Form & button styles on index and dashboard */
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  max-width: 400px;
+  padding: 10px;
+  margin: 5px 0;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 4px;
+  background-color: #4CAF50;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+.error {
+  color: red;
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+/* Dashboard lists styling */
+#roomList li,
+#requestList li {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Responsive design */
 @media (max-width: 600px) {
   header {
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
   }
-
+  
   #chatBox {
     height: 300px;
   }
-
+  
   #msgInput {
-    width: calc(100% - 60px);
+    width: calc(100% - 70px);
   }
-
+  
   #sendBtn {
-    width: 50px;
+    width: 60px;
   }
 }
