@@ -1,22 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chat App – Dashboard</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js"></script>
-  <script type="module" src="firebase-config.js"></script>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
     <h1>Dashboard</h1>
-    <button id="accountBtn">Account</button>
-    <div id="accountMenu" class="hidden">
-      <button id="settingsBtn">Settings</button>
-      <button id="logoutBtn">Logout</button>
-    </div>
+    <nav>
+      <a href="index.html">Logout</a>
+    </nav>
   </header>
 
   <main>
@@ -24,7 +19,7 @@
       <h2>Available Rooms</h2>
       <ul id="roomList"></ul>
       <div id="adminRoomControls" class="hidden">
-        <input type="text" id="newRoomCode" placeholder="Enter room code">
+        <input type="text" id="newRoomCode" placeholder="Enter room code" />
         <button id="createRoomBtn">Create / Join Room</button>
         <button id="deleteRoomBtn">Delete Room</button>
       </div>
@@ -39,55 +34,42 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
     import { getDatabase, ref, get, set, remove, onValue } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
-    import { firebaseConfig } from './firebase-config.js';
+    import { firebaseConfig } from "./firebase-config.js";
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    const dbRef = path => ref(db, path);
 
-    const accountBtn = document.getElementById('accountBtn');
-    const accountMenu = document.getElementById('accountMenu');
-    const settingsBtn = document.getElementById('settingsBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
+    const currentUser = localStorage.getItem('chatUser');
+    const currentRank = localStorage.getItem('chatRank') || "newbie";
+
+    if (!currentUser) {
+      window.location = "index.html";
+    }
 
     const roomListEl = document.getElementById('roomList');
     const newRoomCodeInput = document.getElementById('newRoomCode');
     const createRoomBtn = document.getElementById('createRoomBtn');
     const deleteRoomBtn = document.getElementById('deleteRoomBtn');
     const adminRoomControls = document.getElementById('adminRoomControls');
-
     const requestsSection = document.getElementById('requests-section');
     const requestListEl = document.getElementById('requestList');
 
-    let currentUser = localStorage.getItem('chatUser');
-    let currentRank = localStorage.getItem('chatRank') || 'newbie';
-
-    if (!currentUser) {
-      window.location = 'index.html';
+    // Show admin controls if allowed
+    if (["admin","high","core","pioneer"].includes(currentRank)) {
+      adminRoomControls.classList.remove("hidden");
+    }
+    if (["core","pioneer"].includes(currentRank)) {
+      requestsSection.classList.remove("hidden");
     }
 
-    accountBtn.onclick = () => accountMenu.classList.toggle('hidden');
-    logoutBtn.onclick = () => {
-      localStorage.removeItem('chatUser');
-      localStorage.removeItem('chatRank');
-      window.location = 'index.html';
-    };
-
-    // Show controls based on rank
-    if (['admin','high','core','pioneer'].includes(currentRank)) {
-      adminRoomControls.classList.remove('hidden');
-    }
-    if (['core','pioneer'].includes(currentRank)) {
-      requestsSection.classList.remove('hidden');
-    }
-
-    // Load rooms list
-    const roomsRef = ref(db, 'rooms');
-    onValue(roomsRef, snapshot => {
+    // Load rooms
+    onValue(dbRef("rooms"), snapshot => {
       const rooms = snapshot.val() || {};
-      roomListEl.innerHTML = '';
+      roomListEl.innerHTML = "";
       Object.keys(rooms).forEach(code => {
-        const li = document.createElement('li');
-        const btn = document.createElement('button');
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
         btn.innerText = `Join ${code}`;
         btn.onclick = () => window.location = `chat.html?room=${encodeURIComponent(code)}`;
         li.appendChild(btn);
@@ -96,33 +78,29 @@
     });
 
     // Load registration requests
-    const reqRef = ref(db, 'registrationRequests');
-    onValue(reqRef, snapshot => {
-      const requests = snapshot.val() || {};
-      requestListEl.innerHTML = '';
-      Object.entries(requests).forEach(([username, info]) => {
+    onValue(dbRef("registrationRequests"), snapshot => {
+      const reqs = snapshot.val() || {};
+      requestListEl.innerHTML = "";
+      Object.entries(reqs).forEach(([username, info]) => {
         if (info.status === "pending") {
-          const li = document.createElement('li');
+          const li = document.createElement("li");
           li.innerText = `${username} — requested at ${new Date(info.requestedAt).toLocaleString()}`;
-          const approveBtn = document.createElement('button');
-          approveBtn.innerText = 'Approve';
+          const approveBtn = document.createElement("button");
+          approveBtn.innerText = "Approve";
           approveBtn.onclick = async () => {
-            // Approve: move to users, set rank newbie
-            await set(ref(db, `users/${username}`), {
+            await set(dbRef(`users/${username}`), {
               password: info.password,
               rank: "newbie",
               status: "active",
               credits: 0,
               titles: ["newcomer"]
             });
-            await remove(ref(db, `registrationRequests/${username}`));
-            alert(`User ${username} approved.`);
+            await remove(dbRef(`registrationRequests/${username}`));
           };
-          const rejectBtn = document.createElement('button');
-          rejectBtn.innerText = 'Reject';
+          const rejectBtn = document.createElement("button");
+          rejectBtn.innerText = "Reject";
           rejectBtn.onclick = async () => {
-            await remove(ref(db, `registrationRequests/${username}`));
-            alert(`User ${username} rejected.`);
+            await remove(dbRef(`registrationRequests/${username}`));
           };
           li.appendChild(approveBtn);
           li.appendChild(rejectBtn);
@@ -134,28 +112,87 @@
     createRoomBtn.onclick = () => {
       const code = newRoomCodeInput.value.trim();
       if (!code) return;
-      const roomRef = ref(db, `rooms/${code}`);
-      get(roomRef).then(snapshot => {
-        if (snapshot.exists()) {
+      get(dbRef(`rooms/${code}`)).then(snap => {
+        if (snap.exists()) {
           window.location = `chat.html?room=${encodeURIComponent(code)}`;
         } else {
-          set(roomRef, { createdBy: currentUser, messages:{}, participants:{} })
+          set(dbRef(`rooms/${code}`), { createdBy: currentUser, messages: {}, participants: {} })
             .then(() => window.location = `chat.html?room=${encodeURIComponent(code)}`);
         }
       });
     };
 
     deleteRoomBtn.onclick = () => {
-      if (['admin','high','core','pioneer'].includes(currentRank)) {
+      if (["admin","high","core","pioneer"].includes(currentRank)) {
         const code = newRoomCodeInput.value.trim();
         if (!code) return;
-        remove(ref(db, `rooms/${code}`))
-          .then(() => alert('Room deleted: ' + code))
-          .catch(err => alert('Error deleting room: ' + err.message));
-      } else {
-        alert('Permission denied');
+        remove(dbRef(`rooms/${code}`));
       }
     };
+
+    // Console command interface: type ?/command in dev console
+    window.runCommand = async function(line) {
+      line = line.trim();
+      if (!line.startsWith("?/")) {
+        console.warn("Commands must start with ?/");
+        return;
+      }
+      const parts = line.slice(2).split(/\s+/);
+      const cmd = parts[0];
+      const args = parts.slice(1);
+      const rankOrder = { newbie:0, member:1, admin:2, high:3, core:4, pioneer:5 };
+      const myRankVal = rankOrder[currentRank];
+
+      switch (cmd) {
+        case "create":
+          // args: roomCode
+          if (args[0]) {
+            await set(dbRef(`rooms/${args[0]}`), { createdBy: currentUser, messages:{}, participants:{} });
+            console.log("Created room:", args[0]);
+          }
+          break;
+        case "delete":
+          // args: roomCode
+          if (args[0] && myRankVal >= rankOrder["admin"]) {
+            await remove(dbRef(`rooms/${args[0]}`));
+            console.log("Deleted room:", args[0]);
+          } else {
+            console.warn("Insufficient permission");
+          }
+          break;
+        case "approve":
+          // args: username
+          if (args[0] && ["core","pioneer"].includes(currentRank)) {
+            const u = args[0];
+            get(dbRef(`registrationRequests/${u}`)).then(snap => {
+              if (snap.exists()) {
+                const info = snap.val();
+                set(dbRef(`users/${u}`), {
+                  password: info.password,
+                  rank: "newbie",
+                  status: "active",
+                  credits: 0,
+                  titles: ["newcomer"]
+                });
+                remove(dbRef(`registrationRequests/${u}`));
+                console.log("Approved:", u);
+              }
+            });
+          }
+          break;
+        case "reject":
+          // args: username
+          if (args[0] && ["core","pioneer"].includes(currentRank)) {
+            await remove(dbRef(`registrationRequests/${args[0]}`));
+            console.log("Rejected:", args[0]);
+          }
+          break;
+        default:
+          console.warn("Unknown command:", cmd);
+      }
+    };
+
+    console.log("Dashboard console commands: ?/create roomCode, ?/delete roomCode, ?/approve username, ?/reject username");
   </script>
 </body>
 </html>
