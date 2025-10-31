@@ -1,21 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chat Room</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
     <h1>Chat Room</h1>
     <button id="accountBtn">Account</button>
     <div id="accountMenu" class="hidden">
-      <button id="settingsBtn">Settings</button>
-      <button id="changeTitleBtn">Change Title</button>
-      <button id="logoutBtn">Logout</button>
+      <!-- Use links for navigation -->
+      <a href="dashboard.html">Settings</a>
+      <a href="index.html" id="logoutLink">Logout</a>
     </div>
-    <button id="leaveBtn">Leave Chat</button>
+    <a href="dashboard.html" id="leaveLink">Leave Chat</a>
   </header>
 
   <main>
@@ -28,71 +28,104 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-    import { getDatabase, ref, get, set, push, onValue, update } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
-    import { firebaseConfig } from './firebase-config.js';
+    import { getDatabase, ref, get, push, onValue, set, update } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+    import { firebaseConfig } from "./firebase-config.js";
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-
     const dbRef = path => ref(db, path);
-    const currentUser = localStorage.getItem('chatUser');
-    const currentRank = localStorage.getItem('chatRank') || 'newbie';
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomCode = urlParams.get('room');
 
-    if (!currentUser) {
-      window.location = 'index.html';
+    // Utility: detect mobile vs desktop (simplistic) — using userAgent containing “Mobi” as proxy
+    function isMobileDevice() {
+      return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
     }
 
-    document.getElementById('accountBtn').onclick = () => {
-      document.getElementById('accountMenu').classList.toggle('hidden');
-    };
-
-    document.getElementById('logoutBtn').onclick = () => {
-      localStorage.removeItem('chatUser');
-      localStorage.removeItem('chatRank');
-      window.location = 'index.html';
-    };
-
-    document.getElementById('changeTitleBtn').onclick = async () => {
-      const newTitle = prompt('Enter your new title:');
-      if (newTitle) {
-        const titlesSnap = await get(dbRef(`users/${currentUser}/titles`));
-        let titles = titlesSnap.exists() ? titlesSnap.val() : [];
-        titles.push(newTitle);
-        await update(dbRef(`users/${currentUser}`), { titles });
-        alert('Title added!');
+    // On load: if desktop and user is pioneer or core, force console login
+    const storedUser = localStorage.getItem('chatUser');
+    const storedRank = localStorage.getItem('chatRank');
+    if (!storedUser) {
+      // no logged in user — redirect to login
+      window.location = "index.html";
+    } else {
+      // if desktop and (core or pioneer), require console login
+      if (!isMobileDevice() && (storedRank === "pioneer" || storedRank === "core")) {
+        console.log("=== Secure Login Required ===");
+        console.log("Please enter your credentials via console as: loginDesktop('username','password')");
+        window.loginDesktop = async function(user, pass) {
+          // validate credentials via Firebase
+          const snap = await get(dbRef(`users/${user}`));
+          if (!snap.exists()) {
+            alert("Login failed: user not found");
+            return;
+          }
+          const udata = snap.val();
+          if (udata.password !== pass) {
+            alert("Login failed: wrong password");
+            return;
+          }
+          if (udata.rank !== storedRank) {
+            alert("Login failed: rank mismatch");
+            return;
+          }
+          // Success — set localStorage and continue
+          localStorage.setItem('chatUser', user);
+          localStorage.setItem('chatRank', udata.rank);
+          alert("Desktop login successful. You may now proceed.");
+        };
+        // Prevent further normal UI until console login is done
+        document.body.innerHTML = "<h2>Desktop login required via console</h2>";
+        throw new Error("Desktop login required");
       }
+    }
+
+    const currentUser = localStorage.getItem('chatUser');
+    const currentRank = localStorage.getItem('chatRank') || "newbie";
+    const params = new URLSearchParams(window.location.search);
+    const roomCode = params.get('room');
+
+    document.getElementById("accountBtn").onclick = () => {
+      document.getElementById("accountMenu").classList.toggle("hidden");
     };
 
-    document.getElementById('sendBtn').onclick = () => {
-      const text = document.getElementById('msgInput').value.trim();
-      if (!text) return;
+    // Change Title link/button
+    document.getElementById("accountMenu").querySelector("a[href='dashboard.html']").onclick = () => {
+      const newTitle = prompt("Enter new title:");
+      if (newTitle) {
+        get(dbRef(`users/${currentUser}`)).then(snap => {
+          const user = snap.val() || {};
+          const titles = user.titles || [];
+          titles.push(newTitle);
+          update(dbRef(`users/${currentUser}`), { titles });
+          alert("Title added");
+        });
+      }
+      return false;
+    };
+
+    document.getElementById("sendBtn").onclick = () => {
+      const txt = document.getElementById("msgInput").value.trim();
+      if (!txt) return;
       const msgRef = push(dbRef(`rooms/${roomCode}/messages`));
       set(msgRef, {
         sender: currentUser,
-        content: text,
+        content: txt,
         timestamp: Date.now(),
         edited: false
       });
-      document.getElementById('msgInput').value = '';
+      document.getElementById("msgInput").value = "";
     };
 
-    const chatBox = document.getElementById('chatBox');
-    onValue(dbRef(`rooms/${roomCode}/messages`), snapshot => {
-      chatBox.innerHTML = '';
-      const msgs = snapshot.val() || {};
+    const chatBox = document.getElementById("chatBox");
+    onValue(dbRef(`rooms/${roomCode}/messages`), snap => {
+      chatBox.innerHTML = "";
+      const msgs = snap.val() || {};
       Object.entries(msgs).forEach(([key, msg]) => {
-        const div = document.createElement('div');
+        const div = document.createElement("div");
         div.textContent = `${msg.sender}: ${msg.content}${msg.edited ? " (edited)" : ""}`;
         chatBox.appendChild(div);
       });
       chatBox.scrollTop = chatBox.scrollHeight;
     });
-
-    document.getElementById('leaveBtn').onclick = () => {
-      window.location = 'dashboard.html';
-    };
   </script>
 </body>
 </html>
