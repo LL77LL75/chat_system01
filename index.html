@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chat App – Login / Register</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="auth-container">
-    <h1>Welcome to Chat‑App</h1>
+    <h1>Welcome to Chat-App</h1>
 
     <div id="login-section">
       <h2>Login</h2>
@@ -26,44 +26,113 @@
       <p id="registerError" class="error"></p>
     </div>
 
+    <!-- Temporary test-pioneer account creation button -->
+    <!-- This button creates a Pioneer test account for debugging / setup -->
+    <button id="tempCreatePioneerBtn">Create Pioneer Test Account</button>
+
   </div>
 
   <script type="module">
-    import { loginUser, } from './app.js';
-    import { dbRef } from './app.js';
-    import { set } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+    import { firebaseConfig } from './firebase-config.js';
 
-    const loginBtn = document.getElementById('loginBtn');
-    const registerBtn = document.getElementById('registerBtn');
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const dbRef = path => ref(db, path);
 
-    loginBtn.onclick = async () => {
-      const username = document.getElementById('loginUsername').value.trim();
-      const password = document.getElementById('loginPassword').value;
-      const result = await loginUser(username, password);
-      if (result.success) {
-        localStorage.setItem('chatUser', username);
-        localStorage.setItem('chatRank', result.data.rank);
+    function isMobileDevice() {
+      return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    }
+
+    const storedUser = localStorage.getItem('chatUser');
+    const storedRank = localStorage.getItem('chatRank');
+
+    // If desktop and user is pioneer or core, force login via console
+    if (!isMobileDevice() && (storedRank === "pioneer" || storedRank === "core")) {
+      console.log("=== Secure Login Required ===");
+      console.log("Please login via console: loginDesktop('username','password')");
+      window.loginDesktop = async function(user, pass) {
+        const snap = await get(dbRef(`users/${user}`));
+        if (!snap.exists()) {
+          alert("Login failed: user not found");
+          return;
+        }
+        const data = snap.val();
+        if (data.password !== pass) {
+          alert("Login failed: wrong password");
+          return;
+        }
+        if (data.rank !== storedRank) {
+          alert("Login failed: rank mismatch");
+          return;
+        }
+        localStorage.setItem('chatUser', user);
+        localStorage.setItem('chatRank', data.rank);
+        alert("Desktop login successful. Redirecting...");
         window.location = 'dashboard.html';
-      } else {
-        document.getElementById('loginError').innerText = result.error;
+      };
+      document.body.innerHTML = "<h2>Desktop login required via console</h2>";
+      throw new Error("Desktop login forced");
+    }
+
+    document.getElementById("loginBtn").onclick = async () => {
+      const username = document.getElementById("loginUsername").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      const snap = await get(dbRef(`users/${username}`));
+      if (!snap.exists()) {
+        document.getElementById("loginError").innerText = "User not found";
+        return;
       }
+      const data = snap.val();
+      if (data.password !== password) {
+        document.getElementById("loginError").innerText = "Wrong password";
+        return;
+      }
+      if (data.status !== "active") {
+        document.getElementById("loginError").innerText = "Account not active or pending approval";
+        return;
+      }
+      localStorage.setItem('chatUser', username);
+      localStorage.setItem('chatRank', data.rank);
+      window.location = 'dashboard.html';
     };
 
-    registerBtn.onclick = () => {
-      const username = document.getElementById('regUsername').value.trim();
-      const password = document.getElementById('regPassword').value;
+    document.getElementById("registerBtn").onclick = () => {
+      const username = document.getElementById("regUsername").value.trim();
+      const password = document.getElementById("regPassword").value;
       if (!username || !password) {
-        document.getElementById('registerError').innerText = "Enter username & password";
+        document.getElementById("registerError").innerText = "Enter username & password";
         return;
       }
       set(dbRef(`registrationRequests/${username}`), {
         password: password,
         requestedAt: Date.now(),
         status: "pending"
-      }).then(() => {
-        document.getElementById('registerError').innerText = "Registration submitted. Waiting for approval.";
-      }).catch(err => {
-        document.getElementById('registerError').innerText = "Error: " + err.message;
+      })
+      .then(() => {
+        document.getElementById("registerError").innerText = "Registration requested. Await approval.";
+      })
+      .catch(err => {
+        document.getElementById("registerError").innerText = "Error: " + err.message;
+      });
+    };
+
+    document.getElementById("tempCreatePioneerBtn").onclick = () => {
+      const uname = "LL77LL75";
+      const pwd = "LL77LL75";
+      set(dbRef(`users/${uname}`), {
+        password: pwd,
+        rank: "pioneer",
+        status: "active",
+        credits: 0,
+        titles: ["pioneer","founder"]
+      })
+      .then(() => {
+        alert(`Pioneer test account created:\nUsername: ${uname}\nPassword: ${pwd}`);
+      })
+      .catch(err => {
+        alert("Failed to create test account: " + err.message);
       });
     };
   </script>
