@@ -6,7 +6,7 @@
 *::after {
   margin: 0;
   padding: 0;
-  box‑sizing: border‑box;
+  box-sizing: border-box;
 }
 
 /* Body styling */
@@ -110,7 +110,7 @@ main {
 }
 
 #moderation‑panel ul {
-  list-style‑type: none;
+  list-style-type: none;
   padding-left: 0;
 }
 
