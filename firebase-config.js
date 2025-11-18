@@ -1,8 +1,8 @@
-// firebase-config.js
+// Import Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-// Firebase config
+// Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCY5_krGDfHcp4ZmUe5RXo7BaKYUQwAM8E",
     authDomain: "chat-app-6767.firebaseapp.com",
@@ -15,7 +15,5 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-export const app = initializeApp(firebaseConfig);
-
-// Initialize Realtime Database
+const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
