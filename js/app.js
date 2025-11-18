@@ -1,158 +1,239 @@
-// app.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-import { getDatabase, ref, get, set, update, push, onValue, remove } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
-import { firebaseConfig } from './firebase-config.js';
+// app.js — main logic for login, account creation, commands, chat, dashboard
 
-const app = initializeApp(firebaseConfig);
+import { app } from "./firebase-config.js";
+import {
+    getDatabase, ref, set, get, update, push, onValue
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+
 const db = getDatabase(app);
 
-export const dbRef = (path) => ref(db, path);
-
-export const ranks = {
-  newbie: {
-    titles: ["newbie", "newcomer"],
-    abilities: ["join","chat","bid","auction"],
-    creditInterval: 15*60*1000
-  },
-  member: {
-    titles: ["member","long-time newbie"],
-    abilities: ["join","chat","bid","auction","react","msg"],
-    creditInterval: 20*60*1000
-  },
-  admin: {
-    titles: ["official","trusty person"],
-    abilities: ["join","chat","bid","auction","react","msg","startRoom","closeRoom","kick"],
-    creditInterval: 25*60*1000
-  },
-  high: {
-    titles: ["powerful","trusted person"],
-    abilities: ["join","chat","bid","auction","react","msg","startRoom","closeRoom","ban","mute","unban","unmute","kick"],
-    creditInterval: 30*60*1000
-  },
-  core: {
-    titles: ["godly power"],
-    abilities: ["join","chat","bid","auction","react","msg","startRoom","closeRoom","ban","mute","unban","unmute","kick","give"],
-    creditInterval: 0
-  },
-  pioneer: {
-    titles: ["pioneer","founder"],
-    abilities: ["join","chat","bid","auction","react","msg","startRoom","closeRoom","ban","mute","unban","unmute","kick","give","promote","createTitle","sellTitle"],
-    creditInterval: 0
-  }
+// Rank power hierarchy (higher number = stronger)
+const RANK_POWER = {
+    "newbie": 1,
+    "member": 2,
+    "admin": 3,
+    "high": 4,
+    "core": 5,
+    "pioneer": 6
 };
 
-// Login user
-export async function loginUser(username, password) {
-  const snap = await get(dbRef(`users/${username}`));
-  if (!snap.exists()) return { success:false, error:"User not found" };
-  const data = snap.val();
-  if (data.password !== password) return { success:false, error:"Wrong password" };
-  if (data.status !== "active") return { success:false, error:"Account not active" };
-  return { success:true, data };
+// Default titles per rank
+const RANK_TITLES = {
+    "newbie": ["newbie", "newcomer"],
+    "member": ["member", "long-time newbie"],
+    "admin": ["official", "trusty person"],
+    "high": ["powerful", "trusted person"],
+    "core": ["godly power"],
+    "pioneer": ["pioneer", "founder"]
+};
+
+let currentUser = null;
+let currentUsername = null;
+
+// PLATFORM CHECK
+function isMobile() {
+    return /android|iphone|ipad|iPod/i.test(navigator.userAgent);
 }
 
-// Create or join room
-export async function createOrJoinRoom(roomCode, username) {
-  const roomRef = dbRef(`rooms/${roomCode}`);
-  const snap = await get(roomRef);
-  if (!snap.exists()) {
-    await set(roomRef, { createdBy:username, messages:{}, participants:{} });
-  }
-  await update(dbRef(`rooms/${roomCode}/participants/${username}`), { joinedAt: Date.now() });
-  return roomRef;
+// LOGIN SYSTEM
+export async function login(username, password) {
+    const snap = await get(ref(db, `users/${username}`));
+
+    if (!snap.exists()) return { success: false, msg: "User does not exist." };
+
+    const data = snap.val();
+
+    if (!isMobile() && (data.rank === "core" || data.rank === "pioneer")) {
+        // PC console login required
+        console.warn(`PC detected. Enter this in console:\nloginConsole("${username}", "${password}")`);
+        return { success: false, msg: "Pioneer/Core must login via console on PC." };
+    }
+
+    // Normal login
+    if (data.password !== password) {
+        return { success: false, msg: "Incorrect password." };
+    }
+
+    if (data.status === "pending") {
+        return { success: false, msg: "Account awaiting approval." };
+    }
+
+    currentUser = data;
+    currentUsername = username;
+
+    return { success: true, msg: "Login successful." };
 }
 
-// Send message
-export function sendMessage(roomCode, sender, content) {
-  const msgRef = push(dbRef(`rooms/${roomCode}/messages`));
-  set(msgRef, {
-    sender, content, timestamp: Date.now(), edited:false
-  });
+// CONSOLE LOGIN (PC ONLY)
+window.loginConsole = async function (username, password) {
+    if (isMobile()) {
+        console.warn("Mobile cannot use console login.");
+        return;
+    }
+
+    const snap = await get(ref(db, `users/${username}`));
+    if (!snap.exists()) return console.warn("User does not exist.");
+    const data = snap.val();
+
+    if (data.password !== password) return console.warn("Incorrect password.");
+    if (data.status === "pending") return console.warn("Account awaiting approval.");
+
+    currentUser = data;
+    currentUsername = username;
+
+    console.warn(`Console login successful as ${username} (${data.rank})`);
+};
+
+// REGISTER ACCOUNT (requires approval)
+export async function registerAccount(username, password) {
+    const check = await get(ref(db, `users/${username}`));
+    if (check.exists()) return { success: false, msg: "Username already exists." };
+
+    await set(ref(db, `users/${username}`), {
+        username,
+        password,
+        rank: "newbie",
+        status: "pending",
+        credits: 0,
+        titles: [...RANK_TITLES["newbie"]],
+        muted: false,
+        banned: false
+    });
+
+    return { success: true, msg: "Account created. Awaiting approval from core/pioneer." };
 }
 
-// Listen for messages
-export function onNewMessage(roomCode, callback) {
-  onValue(dbRef(`rooms/${roomCode}/messages`), snap => {
-    const msgs = snap.val() || {};
-    callback(msgs);
-  });
+// APPROVE ACCOUNT
+async function approveUser(target) {
+    const snap = await get(ref(db, `users/${target}`));
+    if (!snap.exists()) return "User not found.";
+
+    await update(ref(db, `users/${target}`), { status: "active" });
+    return `${target} has been approved.`;
 }
 
-// Change title (user)
-export async function changeTitle(username, newTitle) {
-  await update(dbRef(`users/${username}`), { titles:[newTitle] });
+// CHECK RANK PERMISSION
+function hasPowerOver(actor, target) {
+    return RANK_POWER[actor.rank] > RANK_POWER[target.rank];
 }
 
-// Give item (credits or title)
-export async function giveItem(sender, target, item, value) {
-  const snap = await get(dbRef(`users/${sender}`));
-  if (!snap.exists()) return false;
-  const sData = snap.val();
-  if (!ranks[sData.rank].abilities.includes("give")) return false;
+// COMMAND HANDLER
+async function processCommand(text) {
+    if (!currentUser) return "Not logged in.";
 
-  if (item === "credits") {
-    const tSnap = await get(dbRef(`users/${target}`));
-    if (!tSnap.exists()) return false;
-    const tData = tSnap.val();
-    const newCredits = (tData.credits||0) + Number(value);
-    await update(dbRef(`users/${target}`), { credits:newCredits });
-    return true;
-  }
-  if (item === "title") {
-    const tSnap = await get(dbRef(`users/${target}`));
-    if (!tSnap.exists()) return false;
-    const tTitles = tSnap.val().titles || [];
-    tTitles.push(value);
-    await update(dbRef(`users/${target}`), { titles:tTitles });
-    return true;
-  }
-  return false;
+    if (!text.startsWith("?/")) return "Invalid command format.";
+
+    const parts = text.substring(2).split(" ");
+    const cmd = parts[0];
+    const args = parts.slice(1);
+
+    switch (cmd) {
+
+        case "approve": {
+            if (currentUser.rank !== "core" && currentUser.rank !== "pioneer")
+                return "Only core/pioneer can approve accounts.";
+            return await approveUser(args[0]);
+        }
+
+        // Give credits
+        case "give": {
+            const target = args[0];
+            const amount = parseInt(args[1]);
+
+            const snap = await get(ref(db, `users/${target}`));
+            if (!snap.exists()) return "Target user not found.";
+
+            const data = snap.val();
+
+            if (!hasPowerOver(currentUser, data))
+                return "You do not have enough rank power.";
+
+            await update(ref(db, `users/${target}`), {
+                credits: data.credits + amount
+            });
+
+            return `Gave ${amount} credits to ${target}`;
+        }
+
+        // Auction (anyone can auction titles)
+        case "auction": {
+            const item = args[0];
+            const price = parseInt(args[1]);
+
+            const pushRef = push(ref(db, "auctions"));
+            await set(pushRef, {
+                seller: currentUsername,
+                item,
+                startingPrice: price
+            });
+
+            return `Auction created: ${item} starting at ${price} credits.`;
+        }
+
+        // Pioneer: create custom title
+        case "makeTitle": {
+            if (currentUser.rank !== "pioneer")
+                return "Only a pioneer can create titles.";
+
+            const target = args[0];
+            const customTitle = args.slice(1).join(" ");
+
+            const snap = await get(ref(db, `users/${target}`));
+            if (!snap.exists()) return "Target not found.";
+
+            const oldTitles = snap.val().titles || [];
+
+            await update(ref(db, `users/${target}`), {
+                titles: [...oldTitles, customTitle]
+            });
+
+            return `Custom title '${customTitle}' added to ${target}.`;
+        }
+
+        // Mute / Unmute
+        case "mute":
+        case "unmute": {
+            const target = args[0];
+            const snap = await get(ref(db, `users/${target}`));
+            if (!snap.exists()) return "User not found.";
+
+            const data = snap.val();
+
+            if (!hasPowerOver(currentUser, data))
+                return "Cannot mute/unmute higher or equal rank.";
+
+            await update(ref(db, `users/${target}`), {
+                muted: cmd === "mute"
+            });
+
+            return `${target} ${cmd === "mute" ? "muted" : "unmuted"}.`;
+        }
+
+        // Ban / Unban
+        case "ban":
+        case "unban": {
+            const target = args[0];
+            const snap = await get(ref(db, `users/${target}`));
+            if (!snap.exists()) return "User not found.";
+
+            const data = snap.val();
+
+            if (!hasPowerOver(currentUser, data))
+                return "Cannot ban/unban higher or equal rank.";
+
+            await update(ref(db, `users/${target}`), {
+                banned: cmd === "ban"
+            });
+
+            return `${target} ${cmd === "ban" ? "banned" : "unbanned"}.`;
+        }
+
+        default:
+            return "Unknown command.";
+    }
 }
 
-// Create a new title (pioneer only)
-export async function createTitle(creator, titleName, cost) {
-  const snap = await get(dbRef(`users/${creator}`));
-  if (!snap.exists()) return false;
-  const data = snap.val();
-  if (!ranks[data.rank].abilities.includes("createTitle")) return false;
-
-  const tRef = push(dbRef(`titles`));
-  await set(tRef, { name: titleName, cost:Number(cost), createdBy:creator });
-  return true;
-}
-
-// Sell a title (pioneer only)
-export async function sellTitle(seller, titleId, buyer) {
-  const sSnap = await get(dbRef(`users/${seller}`));
-  if (!sSnap.exists()) return false;
-  const sData = sSnap.val();
-  if (!ranks[sData.rank].abilities.includes("sellTitle")) return false;
-
-  const tSnap = await get(dbRef(`titles/${titleId}`));
-  if (!tSnap.exists()) return false;
-  const tData = tSnap.val();
-
-  const bSnap = await get(dbRef(`users/${buyer}`));
-  if (!bSnap.exists()) return false;
-  const bData = bSnap.val();
-
-  if ((bData.credits||0) < tData.cost) return false;
-
-  await update(dbRef(`users/${buyer}`), { credits:(bData.credits - tData.cost) });
-  const bt = bData.titles || [];
-  bt.push(tData.name);
-  await update(dbRef(`users/${buyer}`), { titles:bt });
-  return true;
-}
-
-// Promote user (pioneer only)
-export async function promoteUser(promoter, target, newRank) {
-  const pSnap = await get(dbRef(`users/${promoter}`));
-  if (!pSnap.exists()) return false;
-  const pData = pSnap.val();
-  if (pData.rank !== "pioneer") return false;
-  if (!ranks[newRank]) return false;
-
-  await update(dbRef(`users/${target}`), { rank:newRank });
-  return true;
+// PUBLIC FUNCTION FOR CHAT/ DASHBOARD
+export async function handleConsoleInput(text) {
+    return await processCommand(text);
 }

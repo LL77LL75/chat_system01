@@ -1,4 +1,10 @@
 // firebase-config.js
+// Converted from your <script type="module"> snippet
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+
+// Your Firebase configuration
 export const firebaseConfig = {
   apiKey: "AIzaSyCY5_krGDfHcp4ZmUe5RXo7BaKYUQwAM8E",
   authDomain: "chat-app-6767.firebaseapp.com",
@@ -9,3 +15,7 @@ export const firebaseConfig = {
   appId: "1:705833150639:web:618339099f129a4ccacc5a",
   measurementId: "G-3P9WH9S08E"
 };
+
+// Initialize Firebase
+export const app = initializeApp(firebaseConfig);
+export const analytics = getAnalytics(app);
