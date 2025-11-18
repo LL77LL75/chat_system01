@@ -1,11 +1,8 @@
 // firebase-config.js
-// Clean Firebase configuration for GitHub Pages
-// Exports app and db (Realtime Database instance)
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-// Firebase configuration
+// Firebase config
 const firebaseConfig = {
     apiKey: "AIzaSyCY5_krGDfHcp4ZmUe5RXo7BaKYUQwAM8E",
     authDomain: "chat-app-6767.firebaseapp.com",
@@ -22,7 +19,3 @@ export const app = initializeApp(firebaseConfig);
 
 // Initialize Realtime Database
 export const db = getDatabase(app);
-
-// Optional: comment out Analytics to avoid fetch errors on GitHub Pages
-// import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
-// export const analytics = getAnalytics(app);
