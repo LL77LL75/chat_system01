@@ -1,10 +1,10 @@
 // app.js
-// Main logic for login, dashboard, chat, commands, credits, rank system,
-// auctions, titles, and Firebase Realtime Database communication.
+// GitHub Pages-friendly chat app with Firebase Realtime Database
+// Handles login, dashboard, chat, rooms, commands, ranks, credits, auctions, and titles.
 
 import { db } from "./firebase-config.js";
-import { 
-    ref, get, set, update, onValue, push, remove 
+import {
+    ref, get, set, update, onValue, push, remove
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
 /* ------------------------------
@@ -19,7 +19,6 @@ window.creditInterval = null;
    RANKS & TITLES
 ------------------------------ */
 const RANKS = ["newbie", "member", "admin", "high", "core", "pioneer"];
-
 const TITLES_BY_RANK = {
     newbie: ["newbie", "newcomer"],
     member: ["member", "long-time newbie"],
@@ -30,7 +29,7 @@ const TITLES_BY_RANK = {
 };
 
 /* ------------------------------
-   LOGIN HANDLER
+   LOGIN FUNCTIONS
 ------------------------------ */
 window.normalLogin = async function () {
     const username = document.getElementById("login-username").value.trim();
@@ -39,48 +38,29 @@ window.normalLogin = async function () {
     const userRef = ref(db, "users/" + username);
     const snap = await get(userRef);
 
-    if (!snap.exists()) {
-        alert("User does not exist or not approved yet.");
-        return;
-    }
-
+    if (!snap.exists()) { alert("User does not exist or not approved yet."); return; }
     const data = snap.val();
-    if (data.password !== password) {
-        alert("Wrong password");
-        return;
-    }
+    if (data.password !== password) { alert("Wrong password"); return; }
 
     window.currentUser = { username, ...data };
     localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
     window.location.href = "dashboard.html";
 };
 
-/* ------------------------------
-   PIONEER / CORE CONSOLE LOGIN
------------------------------- */
+/* Console login for Pioneer/Core on PC */
 window.consoleLogin = async function(user, pass) {
     const userRef = ref(db, "users/" + user);
     const snap = await get(userRef);
-
-    if (!snap.exists()) {
-        console.log("Invalid user.");
-        return;
-    }
-
+    if (!snap.exists()) { console.log("Invalid user."); return; }
     const data = snap.val();
-    if (data.password !== pass) {
-        console.log("Wrong password.");
+    if (data.password !== pass) { console.log("Wrong password."); return; }
+    if (!["core","pioneer"].includes(data.rank)) {
+        console.log("Console login only for Core/Pioneer.");
         return;
     }
-
-    if (data.rank !== "core" && data.rank !== "pioneer") {
-        console.log("Console login only allowed for core/pioneer.");
-        return;
-    }
-
     window.currentUser = { username: user, ...data };
     localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-    console.log("Login successful as " + user + ". Redirecting...");
+    console.log("Login successful as " + user);
     window.location.href = "dashboard.html";
 };
 
@@ -124,7 +104,6 @@ function creditsPerRank(rank) {
 
 function startCreditTimer() {
     if (!window.currentUser) return;
-
     const interval = creditsPerRank(window.currentUser.rank);
     if (interval === -1) return;
 
@@ -151,19 +130,16 @@ window.userActive = function () {
 window.createRoom = async function(roomCode) {
     const roomRef = ref(db, "rooms/" + roomCode);
     const snap = await get(roomRef);
-
     if (snap.exists()) {
         alert("Room exists. Joining it.");
         joinRoom(roomCode);
         return;
     }
-
     await set(roomRef, {
         users: {},
         messages: {},
         auctions: {}
     });
-
     alert("Room created.");
     joinRoom(roomCode);
 };
@@ -183,7 +159,6 @@ window.joinRoom = async function(roomCode) {
 
 window.leaveRoom = async function() {
     if (!window.currentRoom || !window.currentUser) return;
-
     const userRef = ref(db, `rooms/${window.currentRoom}/users/${window.currentUser.username}`);
     await remove(userRef);
 
@@ -206,7 +181,7 @@ window.deleteRoom = async function(roomCode) {
 window.sendMessage = async function() {
     const msgInput = document.getElementById("message-input");
     const msg = msgInput.value.trim();
-    if (msg.length === 0) return;
+    if (!msg) return;
 
     if (msg.startsWith("?/")) {
         handleCommand(msg);
@@ -322,7 +297,7 @@ async function startAuction(item, price) {
    RANK COMMAND (Only Pioneer)
 ------------------------------ */
 async function rankUser(name, newRank) {
-    if (window.currentUser.rank !== "pioneer") { console.log("Only pioneers can change ranks."); return; }
+    if (window.currentUser.rank !== "pioneer") { console.log("Only Pioneer can change ranks."); return; }
     if (!RANKS.includes(newRank)) { console.log("Invalid rank."); return; }
 
     const userRef = ref(db, "users/" + name);
