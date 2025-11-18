@@ -1,198 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chat App – Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase + Scripts -->
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="app.js"></script>
+    <script type="module" src="dashboard.js"></script>
 </head>
 <body>
-  <header>
-    <h1>Dashboard</h1>
-    <nav>
-      <a href="index.html">Logout</a>
-    </nav>
-  </header>
 
-  <main>
-    <section id="rooms-section">
-      <h2>Available Rooms</h2>
-      <ul id="roomList"></ul>
-      <div id="adminRoomControls" class="hidden">
-        <input type="text" id="newRoomCode" placeholder="Enter room code" />
-        <button id="createRoomBtn">Create / Join Room</button>
-        <button id="deleteRoomBtn">Delete Room</button>
-      </div>
-    </section>
+<div class="dashboard-container">
 
-    <section id="requests-section" class="hidden">
-      <h2>Registration Requests</h2>
-      <ul id="requestList"></ul>
-    </section>
-  </main>
+    <!-- SIDE PANEL (kept exactly as you requested) -->
+    <div class="side-panel">
+        <h2>Control Panel</h2>
+        <p>Logged in as: <span id="dash-username">Loading...</span></p>
+        <p>Role: <span id="dash-role">Loading...</span></p>
+        <hr>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-    import { getDatabase, ref, get, set, remove, onValue } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
-    import { firebaseConfig } from "./firebase-config.js";
+        <h3>Console Commands</h3>
+        <ul>
+            <li>?/mute [username] [minutes]</li>
+            <li>?/unmute [username]</li>
+            <li>?/ban [username]</li>
+            <li>?/unban [username]</li>
+            <li>?/setrole [username] [role]</li>
+            <li>?/title [username] [new title]</li>
+            <li>?/auction [title] [starting price]</li>
+        </ul>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const dbRef = path => ref(db, path);
+        <p class="note">
+            Commands must be typed directly in the browser console.<br>
+            Example: <code>?/setrole Mark Core</code>
+        </p>
 
-    const currentUser = localStorage.getItem('chatUser');
-    const currentRank = localStorage.getItem('chatRank') || "newbie";
+        <hr>
 
-    if (!currentUser) {
-      window.location = "index.html";
-    }
+        <a href="index.html" class="nav-btn">Logout</a>
+        <a href="chat.html" class="nav-btn">Go to Chat</a>
+    </div>
 
-    const roomListEl = document.getElementById('roomList');
-    const newRoomCodeInput = document.getElementById('newRoomCode');
-    const createRoomBtn = document.getElementById('createRoomBtn');
-    const deleteRoomBtn = document.getElementById('deleteRoomBtn');
-    const adminRoomControls = document.getElementById('adminRoomControls');
-    const requestsSection = document.getElementById('requests-section');
-    const requestListEl = document.getElementById('requestList');
+    <!-- MAIN DASHBOARD -->
+    <div class="dashboard-main">
+        <h1>Dashboard</h1>
 
-    // Show admin controls if allowed
-    if (["admin","high","core","pioneer"].includes(currentRank)) {
-      adminRoomControls.classList.remove("hidden");
-    }
-    if (["core","pioneer"].includes(currentRank)) {
-      requestsSection.classList.remove("hidden");
-    }
+        <div class="info-box">
+            <h2>Account Info</h2>
+            <p><strong>Username:</strong> <span id="db-username">Loading...</span></p>
+            <p><strong>Role:</strong> <span id="db-role">Loading...</span></p>
+            <p><strong>Status:</strong> <span id="db-status">Loading...</span></p>
+        </div>
 
-    // Load rooms
-    onValue(dbRef("rooms"), snapshot => {
-      const rooms = snapshot.val() || {};
-      roomListEl.innerHTML = "";
-      Object.keys(rooms).forEach(code => {
-        const li = document.createElement("li");
-        const btn = document.createElement("button");
-        btn.innerText = `Join ${code}`;
-        btn.onclick = () => window.location = `chat.html?room=${encodeURIComponent(code)}`;
-        li.appendChild(btn);
-        roomListEl.appendChild(li);
-      });
-    });
+        <div class="info-box">
+            <h2>Active Auctions</h2>
+            <div id="auction-list">Loading auctions...</div>
+        </div>
 
-    // Load registration requests
-    onValue(dbRef("registrationRequests"), snapshot => {
-      const reqs = snapshot.val() || {};
-      requestListEl.innerHTML = "";
-      Object.entries(reqs).forEach(([username, info]) => {
-        if (info.status === "pending") {
-          const li = document.createElement("li");
-          li.innerText = `${username} — requested at ${new Date(info.requestedAt).toLocaleString()}`;
-          const approveBtn = document.createElement("button");
-          approveBtn.innerText = "Approve";
-          approveBtn.onclick = async () => {
-            await set(dbRef(`users/${username}`), {
-              password: info.password,
-              rank: "newbie",
-              status: "active",
-              credits: 0,
-              titles: ["newcomer"]
-            });
-            await remove(dbRef(`registrationRequests/${username}`));
-          };
-          const rejectBtn = document.createElement("button");
-          rejectBtn.innerText = "Reject";
-          rejectBtn.onclick = async () => {
-            await remove(dbRef(`registrationRequests/${username}`));
-          };
-          li.appendChild(approveBtn);
-          li.appendChild(rejectBtn);
-          requestListEl.appendChild(li);
-        }
-      });
-    });
+        <div class="info-box">
+            <h2>User Titles</h2>
+            <div id="title-list">Loading titles...</div>
+        </div>
 
-    createRoomBtn.onclick = () => {
-      const code = newRoomCodeInput.value.trim();
-      if (!code) return;
-      get(dbRef(`rooms/${code}`)).then(snap => {
-        if (snap.exists()) {
-          window.location = `chat.html?room=${encodeURIComponent(code)}`;
-        } else {
-          set(dbRef(`rooms/${code}`), { createdBy: currentUser, messages: {}, participants: {} })
-            .then(() => window.location = `chat.html?room=${encodeURIComponent(code)}`);
-        }
-      });
-    };
+    </div>
 
-    deleteRoomBtn.onclick = () => {
-      if (["admin","high","core","pioneer"].includes(currentRank)) {
-        const code = newRoomCodeInput.value.trim();
-        if (!code) return;
-        remove(dbRef(`rooms/${code}`));
-      }
-    };
+</div>
 
-    // Console command interface: type ?/command in dev console
-    window.runCommand = async function(line) {
-      line = line.trim();
-      if (!line.startsWith("?/")) {
-        console.warn("Commands must start with ?/");
-        return;
-      }
-      const parts = line.slice(2).split(/\s+/);
-      const cmd = parts[0];
-      const args = parts.slice(1);
-      const rankOrder = { newbie:0, member:1, admin:2, high:3, core:4, pioneer:5 };
-      const myRankVal = rankOrder[currentRank];
-
-      switch (cmd) {
-        case "create":
-          // args: roomCode
-          if (args[0]) {
-            await set(dbRef(`rooms/${args[0]}`), { createdBy: currentUser, messages:{}, participants:{} });
-            console.log("Created room:", args[0]);
-          }
-          break;
-        case "delete":
-          // args: roomCode
-          if (args[0] && myRankVal >= rankOrder["admin"]) {
-            await remove(dbRef(`rooms/${args[0]}`));
-            console.log("Deleted room:", args[0]);
-          } else {
-            console.warn("Insufficient permission");
-          }
-          break;
-        case "approve":
-          // args: username
-          if (args[0] && ["core","pioneer"].includes(currentRank)) {
-            const u = args[0];
-            get(dbRef(`registrationRequests/${u}`)).then(snap => {
-              if (snap.exists()) {
-                const info = snap.val();
-                set(dbRef(`users/${u}`), {
-                  password: info.password,
-                  rank: "newbie",
-                  status: "active",
-                  credits: 0,
-                  titles: ["newcomer"]
-                });
-                remove(dbRef(`registrationRequests/${u}`));
-                console.log("Approved:", u);
-              }
-            });
-          }
-          break;
-        case "reject":
-          // args: username
-          if (args[0] && ["core","pioneer"].includes(currentRank)) {
-            await remove(dbRef(`registrationRequests/${args[0]}`));
-            console.log("Rejected:", args[0]);
-          }
-          break;
-        default:
-          console.warn("Unknown command:", cmd);
-      }
-    };
-
-    console.log("Dashboard console commands: ?/create roomCode, ?/delete roomCode, ?/approve username, ?/reject username");
-  </script>
 </body>
 </html>
