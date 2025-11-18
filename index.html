@@ -22,54 +22,16 @@
 
     <p class="note">
         <strong>Core & Pioneer Notice:</strong>  
-        On computer, you must log in through console:  
+        On computer, you must log in through the browser console:  
         <br><code>consoleLogin("username", "password")</code>  
         (On mobile, use the normal login button.)
     </p>
 
     <hr>
 
-    <!-- TEMPORARY BUTTON: Creates a Pioneer test account (remove after testing) -->
-  <button id="createTestPioneerBtn" style="
-      margin-top:20px;
-      padding:10px;
-      background:#ff4444;
-      color:white;
-      border:none;
-      border-radius:6px;
-      cursor:pointer;
-    ">
-      Create Pioneer Test Account
-  </button>
-
-  <script type="module">
-  import { db } from "./firebase-config.js";
-  import { ref, set, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
-
-  document.getElementById("createTestPioneerBtn").addEventListener("click", async () => {
-
-      const username = "LL77LL75";
-      const password = "LL77LL75";
-
-      const userRef = ref(db, "users/" + username);
-
-      const data = {
-          username: username,
-          password: password,
-          role: "pioneer",
-          title: "Pioneer",
-          banned: false,
-          mutedUntil: 0,
-          approved: true
-      };
-
-      await set(userRef, data);
-
-      alert("Pioneer test account created:\nUsername: LL77LL75\nPassword: LL77LL75");
-  });
-  </script>
-
-
+    <!-- TEMPORARY BUTTON FOR SETTING UP THE FIRST PIONEER ACCOUNT -->
+    <!-- Remove this after first use -->
+    <button class="temp-button" onclick="createPioneerTest()">Create Pioneer Test Account</button>
 </div>
 
 </body>
