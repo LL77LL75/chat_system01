@@ -8,24 +8,22 @@
     <script type="module" src="app.js"></script>
 </head>
 <body>
+    <div class="login-container">
+        <h2>Login</h2>
+        <form id="login-form" onsubmit="event.preventDefault(); normalLogin();">
+            <label for="login-username">Username</label>
+            <input id="login-username" type="text" placeholder="Enter username" required>
 
-<div class="login-container">
-    <h2>Login</h2>
-    <form id="login-form" onsubmit="event.preventDefault(); normalLogin();">
-        <label for="login-username">Username</label>
-        <input id="login-username" type="text" placeholder="Enter username" required>
+            <label for="login-password">Password</label>
+            <input id="login-password" type="password" placeholder="Enter password" required>
 
-        <label for="login-password">Password</label>
-        <input id="login-password" type="password" placeholder="Enter password" required>
+            <!-- LOGIN REDIRECT BUTTON -->
+            <a href="dashboard.html" class="btn">Login</a>
+        </form>
 
-        <!-- Login will now redirect to dashboard.html after successful login -->
-        <a href="dashboard.html" class="button-link">Login</a>
-    </form>
-
-    <!-- Temporary Pioneer Test Account Button -->
-    <!-- This button creates a test Pioneer account in Firebase -->
-    <button onclick="createPioneerTest()">Create Pioneer Test Account</button>
-</div>
-
+        <!-- Temporary Pioneer Test Account Button -->
+        <!-- This button creates a test Pioneer account in Firebase -->
+        <button onclick="createPioneerTest()">Create Pioneer Test Account</button>
+    </div>
 </body>
 </html>
