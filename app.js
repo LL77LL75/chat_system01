@@ -2,31 +2,22 @@
 // Main logic for login, dashboard, chat, commands, credits, rank system,
 // auctions, titles, and Firebase Realtime Database communication.
 
-import { app } from "./firebase-config.js";
-import {
-    getDatabase,
-    ref,
-    get,
-    set,
-    update,
-    onValue,
-    push,
-    remove
+import { db } from "./firebase-config.js";
+import { 
+    ref, get, set, update, onValue, push, remove 
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-const db = getDatabase(app);
-
-/* ---------------------------------------------------------
-   GLOBALS
---------------------------------------------------------- */
+/* ------------------------------
+   GLOBAL VARIABLES
+------------------------------ */
 window.currentUser = null;
 window.currentRoom = null;
 window.lastActive = Date.now();
 window.creditInterval = null;
 
-/* ---------------------------------------------------------
-   RANK DEFINITIONS
---------------------------------------------------------- */
+/* ------------------------------
+   RANKS & TITLES
+------------------------------ */
 const RANKS = ["newbie", "member", "admin", "high", "core", "pioneer"];
 
 const TITLES_BY_RANK = {
@@ -35,12 +26,12 @@ const TITLES_BY_RANK = {
     admin: ["official", "trusty person"],
     high: ["powerful", "trusted person"],
     core: ["godly power"],
-    pioneer: ["pioneer", "founder"] // pioneers can also create custom titles
+    pioneer: ["pioneer", "founder"]
 };
 
-/* ---------------------------------------------------------
-   LOGIN HANDLER (for normal users)
---------------------------------------------------------- */
+/* ------------------------------
+   LOGIN HANDLER
+------------------------------ */
 window.normalLogin = async function () {
     const username = document.getElementById("login-username").value.trim();
     const password = document.getElementById("login-password").value.trim();
@@ -59,15 +50,15 @@ window.normalLogin = async function () {
         return;
     }
 
-    currentUser = { username, ...data };
-    localStorage.setItem("currentUser", JSON.stringify(currentUser));
+    window.currentUser = { username, ...data };
+    localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
     window.location.href = "dashboard.html";
 };
 
-/* ---------------------------------------------------------
-   SPECIAL CONSOLE LOGIN FOR CORE + PIONEER ON PC
---------------------------------------------------------- */
-window.consoleLogin = async function (user, pass) {
+/* ------------------------------
+   PIONEER / CORE CONSOLE LOGIN
+------------------------------ */
+window.consoleLogin = async function(user, pass) {
     const userRef = ref(db, "users/" + user);
     const snap = await get(userRef);
 
@@ -87,16 +78,15 @@ window.consoleLogin = async function (user, pass) {
         return;
     }
 
-    currentUser = { username: user, ...data };
-    localStorage.setItem("currentUser", JSON.stringify(currentUser));
+    window.currentUser = { username: user, ...data };
+    localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
     console.log("Login successful as " + user + ". Redirecting...");
     window.location.href = "dashboard.html";
 };
 
-/* ---------------------------------------------------------
-   TEMPORARY: CREATE PIONEER ACCOUNT
-   (Used only once for testing)
---------------------------------------------------------- */
+/* ------------------------------
+   TEMPORARY PIONEER TEST ACCOUNT
+------------------------------ */
 window.createPioneerTest = async function () {
     const testRef = ref(db, "users/LL77LL75");
     await set(testRef, {
@@ -109,21 +99,19 @@ window.createPioneerTest = async function () {
     alert("Pioneer test account created.");
 };
 
-/* ---------------------------------------------------------
-   LOAD USER ON PAGE OPEN
---------------------------------------------------------- */
+/* ------------------------------
+   LOAD CURRENT USER
+------------------------------ */
 window.loadUser = function () {
     const saved = localStorage.getItem("currentUser");
-    if (saved) {
-        currentUser = JSON.parse(saved);
-    }
+    if (saved) window.currentUser = JSON.parse(saved);
 };
 
-/* ---------------------------------------------------------
+/* ------------------------------
    CREDIT SYSTEM
---------------------------------------------------------- */
+------------------------------ */
 function creditsPerRank(rank) {
-    switch (rank) {
+    switch(rank) {
         case "newbie": return 15;
         case "member": return 20;
         case "admin": return 25;
@@ -135,33 +123,32 @@ function creditsPerRank(rank) {
 }
 
 function startCreditTimer() {
-    if (!currentUser) return;
+    if (!window.currentUser) return;
 
-    const interval = creditsPerRank(currentUser.rank);
+    const interval = creditsPerRank(window.currentUser.rank);
     if (interval === -1) return;
 
-    creditInterval = setInterval(async () => {
+    window.creditInterval = setInterval(async () => {
         const now = Date.now();
-        if (now - lastActive > 1.5 * 60 * 60 * 1000) {
-            // user idle too long → remove earned credits
-            currentUser.credits = Math.max(0, currentUser.credits - 1);
+        if (now - window.lastActive > 1.5*60*60*1000) {
+            window.currentUser.credits = Math.max(0, window.currentUser.credits-1);
         } else {
-            currentUser.credits++;
+            window.currentUser.credits++;
         }
-        update(ref(db, "users/" + currentUser.username), {
-            credits: currentUser.credits
+        await update(ref(db, "users/" + window.currentUser.username), {
+            credits: window.currentUser.credits
         });
     }, interval * 60 * 1000);
 }
 
 window.userActive = function () {
-    lastActive = Date.now();
+    window.lastActive = Date.now();
 };
 
-/* ---------------------------------------------------------
+/* ------------------------------
    ROOM FUNCTIONS
---------------------------------------------------------- */
-window.createRoom = async function (roomCode) {
+------------------------------ */
+window.createRoom = async function(roomCode) {
     const roomRef = ref(db, "rooms/" + roomCode);
     const snap = await get(roomRef);
 
@@ -181,63 +168,57 @@ window.createRoom = async function (roomCode) {
     joinRoom(roomCode);
 };
 
-window.joinRoom = async function (roomCode) {
-    currentRoom = roomCode;
+window.joinRoom = async function(roomCode) {
+    window.currentRoom = roomCode;
     localStorage.setItem("currentRoom", roomCode);
 
-    const userRef = ref(db, "rooms/" + roomCode + "/users/" + currentUser.username);
+    const userRef = ref(db, `rooms/${roomCode}/users/${window.currentUser.username}`);
     await set(userRef, {
-        rank: currentUser.rank,
+        rank: window.currentUser.rank,
         joined: Date.now()
     });
 
     window.location.href = "chat.html";
 };
 
-window.leaveRoom = async function () {
-    if (!currentRoom || !currentUser) return;
+window.leaveRoom = async function() {
+    if (!window.currentRoom || !window.currentUser) return;
 
-    const userRef = ref(db, "rooms/" + currentRoom + "/users/" + currentUser.username);
+    const userRef = ref(db, `rooms/${window.currentRoom}/users/${window.currentUser.username}`);
     await remove(userRef);
 
     localStorage.removeItem("currentRoom");
     window.location.href = "dashboard.html";
 };
 
-window.deleteRoom = async function (roomCode) {
-    if (currentUser.rank !== "admin" &&
-        currentUser.rank !== "high" &&
-        currentUser.rank !== "core" &&
-        currentUser.rank !== "pioneer") {
+window.deleteRoom = async function(roomCode) {
+    if (!["admin","high","core","pioneer"].includes(window.currentUser.rank)) {
         alert("Not allowed.");
         return;
     }
-
     await remove(ref(db, "rooms/" + roomCode));
     alert("Room deleted.");
 };
 
-/* ---------------------------------------------------------
-   SEND CHAT MESSAGE
---------------------------------------------------------- */
-window.sendMessage = async function () {
-    const msgInput = document.getElementById("chat-input");
+/* ------------------------------
+   CHAT FUNCTIONS
+------------------------------ */
+window.sendMessage = async function() {
+    const msgInput = document.getElementById("message-input");
     const msg = msgInput.value.trim();
     if (msg.length === 0) return;
 
-    const isCmd = msg.startsWith("?/");
-
-    if (isCmd) {
+    if (msg.startsWith("?/")) {
         handleCommand(msg);
         msgInput.value = "";
         return;
     }
 
-    const msgRef = ref(db, "rooms/" + currentRoom + "/messages");
+    const msgRef = ref(db, `rooms/${window.currentRoom}/messages`);
     const newMsg = push(msgRef);
 
     await set(newMsg, {
-        sender: currentUser.username,
+        sender: window.currentUser.username,
         text: msg,
         time: Date.now(),
         edited: false
@@ -246,24 +227,37 @@ window.sendMessage = async function () {
     msgInput.value = "";
 };
 
-/* ---------------------------------------------------------
-   COMMAND SYSTEM — “?/anything”
---------------------------------------------------------- */
-window.handleCommand = async function (cmdStr) {
+window.listenToMessages = function() {
+    if (!window.currentRoom) return;
+    const msgRef = ref(db, `rooms/${window.currentRoom}/messages`);
+    const container = document.getElementById("messages");
+
+    onValue(msgRef, snap => {
+        container.innerHTML = "";
+        snap.forEach(child => {
+            const m = child.val();
+            const div = document.createElement("div");
+            div.textContent = `${m.sender}: ${m.text}${m.edited ? " (edited)" : ""}`;
+            container.appendChild(div);
+        });
+    });
+};
+
+/* ------------------------------
+   COMMAND SYSTEM
+------------------------------ */
+window.handleCommand = async function(cmdStr) {
     const parts = cmdStr.split(" ");
     const base = parts[0];
 
-    // ?/give [name] [number/title] credits/title '[title]'
     if (base === "?/give") {
         const target = parts[1];
         const value = parts[2];
         const type = parts[3];
-
         await giveCommand(target, value, type, parts.slice(4).join(" "));
         return;
     }
 
-    // ?/auction [title/status/rank] [starting price]
     if (base === "?/auction") {
         const item = parts[1];
         const price = parseInt(parts[2]);
@@ -271,7 +265,6 @@ window.handleCommand = async function (cmdStr) {
         return;
     }
 
-    // ?/rank [name] [rank] (only pioneer)
     if (base === "?/rank") {
         const name = parts[1];
         const rank = parts[2];
@@ -282,41 +275,36 @@ window.handleCommand = async function (cmdStr) {
     console.log("Unknown command.");
 };
 
-/* ---------------------------------------------------------
-   COMMAND: GIVE
---------------------------------------------------------- */
+/* ------------------------------
+   GIVE COMMAND
+------------------------------ */
 async function giveCommand(target, value, type, extra) {
     const tRef = ref(db, "users/" + target);
     const snap = await get(tRef);
-    if (!snap.exists()) {
-        console.log("User not found.");
-        return;
-    }
-
+    if (!snap.exists()) { console.log("User not found."); return; }
     const data = snap.val();
 
     if (type === "credits") {
         const amount = parseInt(value);
-        update(tRef, { credits: (data.credits || 0) + amount });
+        update(tRef, { credits: (data.credits||0) + amount });
         console.log("Credits given.");
     }
 
     if (type === "title") {
-        const titleName = extra.replace(/'/g, "");
-        const titles = data.titles || [];
+        const titleName = extra.replace(/'/g,"");
+        const titles = data.titles||[];
         titles.push(titleName);
         update(tRef, { titles });
         console.log("Title added.");
     }
 }
 
-/* ---------------------------------------------------------
-   COMMAND: AUCTION
---------------------------------------------------------- */
+/* ------------------------------
+   AUCTION COMMAND
+------------------------------ */
 async function startAuction(item, price) {
-    if (!currentRoom) return;
-
-    const aucRef = ref(db, "rooms/" + currentRoom + "/auctions/");
+    if (!window.currentRoom) return;
+    const aucRef = ref(db, `rooms/${window.currentRoom}/auctions`);
     const newAuc = push(aucRef);
 
     await set(newAuc, {
@@ -330,66 +318,25 @@ async function startAuction(item, price) {
     console.log("Auction started for:", item);
 }
 
-/* ---------------------------------------------------------
-   COMMAND: RANK (PROMOTE/DEMOTE)
-   Only pioneer
---------------------------------------------------------- */
+/* ------------------------------
+   RANK COMMAND (Only Pioneer)
+------------------------------ */
 async function rankUser(name, newRank) {
-    if (currentUser.rank !== "pioneer") {
-        console.log("Only pioneers can change ranks.");
-        return;
-    }
-    if (!RANKS.includes(newRank)) {
-        console.log("Invalid rank.");
-        return;
-    }
+    if (window.currentUser.rank !== "pioneer") { console.log("Only pioneers can change ranks."); return; }
+    if (!RANKS.includes(newRank)) { console.log("Invalid rank."); return; }
 
     const userRef = ref(db, "users/" + name);
     const snap = await get(userRef);
+    if (!snap.exists()) { console.log("User not found."); return; }
 
-    if (!snap.exists()) {
-        console.log("User not found.");
-        return;
-    }
-
-    await update(userRef, {
-        rank: newRank,
-        titles: TITLES_BY_RANK[newRank]
-    });
-
+    await update(userRef, { rank: newRank, titles: TITLES_BY_RANK[newRank] });
     console.log("Rank updated.");
 }
 
-/* ---------------------------------------------------------
-   CHAT LISTENER
---------------------------------------------------------- */
-window.listenToMessages = function () {
-    if (!currentRoom) return;
-
-    const msgRef = ref(db, "rooms/" + currentRoom + "/messages");
-    onValue(msgRef, (snap) => {
-        const container = document.getElementById("chat-messages");
-        container.innerHTML = "";
-
-        snap.forEach((child) => {
-            const m = child.val();
-            const div = document.createElement("div");
-
-            div.textContent =
-                m.sender +
-                ": " +
-                m.text +
-                (m.edited ? " (edited)" : "");
-
-            container.appendChild(div);
-        });
-    });
-};
-
-/* ---------------------------------------------------------
-   UTIL — LOGOUT
---------------------------------------------------------- */
-window.logout = function () {
+/* ------------------------------
+   LOGOUT
+------------------------------ */
+window.logout = function() {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("currentRoom");
     window.location.href = "index.html";
