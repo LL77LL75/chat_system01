@@ -9,7 +9,6 @@
 </head>
 <body>
 
-<!-- Login Form -->
 <div class="login-container">
     <h2>Login</h2>
     <form id="login-form" onsubmit="event.preventDefault(); normalLogin();">
@@ -19,14 +18,14 @@
         <label for="login-password">Password</label>
         <input id="login-password" type="password" placeholder="Enter password" required>
 
-        <button type="submit">Login</button>
+        <!-- Login will now redirect to dashboard.html after successful login -->
+        <a href="dashboard.html" class="button-link">Login</a>
     </form>
 
     <!-- Temporary Pioneer Test Account Button -->
     <!-- This button creates a test Pioneer account in Firebase -->
     <button onclick="createPioneerTest()">Create Pioneer Test Account</button>
 </div>
-
 
 </body>
 </html>
