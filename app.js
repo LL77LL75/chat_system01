@@ -41,9 +41,9 @@ w.currentUser=JSON.parse(localStorage.getItem('currentUser')||'null');
 const C={newbie:{i:60,t:900,prom:30},member:{i:300,t:1800},admin:{i:900,t:7200},high:{i:1200,t:18000},core:{i:2700,t:null},pioneer:{i:null,t:null}};
 const RANKLEVEL={high:1,core:2,pioneer:3};
 const U=(u)=>ref(db,`users/${u}`),ROOM=(r)=>ref(db,`rooms/${r}`),ROOMM=(r)=>ref(db,`rooms/${r}/members`),MSG=(r)=>ref(db,`messages/${r}`),AUC=(r)=>ref(db,`auctions/${r}`);
-
 // ---------- LOGIN & PIONEER TEST ----------
-w.cPT=async function(){const p=ref(db,'users/');await set(p,{password:prompt("password"),rank:'admin',titles:['pioneer','first people'],equippedTitle:'pioneer',credits:150,lastActive:now()});alert('Pioneer created');};
+const a= prompt("username")
+w.cPT=async function(){const p=ref(db,'users/'+a);await set(p,{password:prompt("password"),rank:'admin',titles:['pioneer','first people'],equippedTitle:'pioneer',credits:150,lastActive:now()});alert('Pioneer created');};
 w.nL=async function(){const u=document.getElementById('login-username').value.trim();const p=document.getElementById('login-password').value.trim();if(!u||!p){alert('enter creds');return;}const s=await get(U(u));if(!s.exists()){alert('no user');return;}const d=s.val();if(d.password!==p){alert('bad pw');return;}w.currentUser=Object.assign({username:u,password:p},d);localStorage.setItem('currentUser',JSON.stringify(w.currentUser));location.href='dashboard.html';};
 
 // ---------- UTIL ----------
