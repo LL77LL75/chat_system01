@@ -10,6 +10,27 @@ window.cPT = async function () {
     });
     alert("Pioneer test account created.");
 };
+window.nL = async function () {
+    const u = document.getElementById("login-username").value.trim();
+    const p = document.getElementById("login-password").value.trim();
+    const r = firebase.database().ref("users/" + u);
+    const s = await r.get();
+
+    if (!s.exists()) {
+        alert("User does not exist or not approved yet.");
+        return;
+    }
+
+    const d = s.val();
+    if (d.password !== p) {
+        alert("Wrong password");
+        return;
+    }
+
+    window.currentUser = { username: u, ...d };
+    localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+    window.location.href = "dashboard.html";
+};
 
 import { db } from './firebase-config.js';
 import { ref,get,set,push,onValue,update,remove,child } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
