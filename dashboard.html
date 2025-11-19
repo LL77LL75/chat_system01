@@ -1,51 +1,38 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Chat App – Dashboard</title>
-    <link rel="stylesheet" href="style.css">
-    <script type="module" src="firebase-config.js"></script>
-    <script type="module" src="app.js"></script>
+<meta charset="utf-8"/>
+<title>Chat – Dashboard</title>
+<link rel="stylesheet" href="style.css"/>
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="app.js"></script>
 </head>
 <body>
-
-<div class="dashboard-container">
-
-    <!-- Account Panel -->
+  <div class="dashboard-container">
     <div class="account-panel">
-        <h3>Account</h3>
-        <!-- Logout link -->
-        <a href="index.html" class="button-link">Logout</a>
-        <!-- Settings link (change username/password) -->
-        <a href="#" onclick="openSettings()">Settings</a>
+      <h3>Account</h3>
+      <p id="user-info">...</p>
+      <a href="#" class="button-link" onclick="oAS()">Account / Settings</a>
+      <a href="index.html" class="button-link" onclick="lO()">Logout</a>
     </div>
 
-    <!-- Room List -->
     <div class="room-panel">
-        <h3>Rooms</h3>
-        <div id="room-list">
-            <!-- Room buttons will be populated dynamically -->
-            <!-- Example:
-            <a href="chat.html?room=124324" class="room-link">Room 124324</a>
-            -->
-        </div>
+      <h3>Rooms</h3>
+      <div id="room-list">Loading...</div>
+      <input id="new-room-code" placeholder="New room code"/>
+      <button onclick="crR()">Create</button>
     </div>
 
-    <!-- Admin Panel (Pioneer/Core only) -->
-    <div class="admin-panel">
-        <h3>Admin Panel</h3>
-        <p>Banned Users:</p>
-        <ul id="banned-users"></ul>
-
-        <p>Muted Users:</p>
-        <ul id="muted-users"></ul>
-
-        <!-- Create Room and Delete Room Links -->
-        <a href="#" onclick="createRoom(prompt('Enter room code'))">Create Room</a>
-        <a href="#" onclick="deleteRoom(prompt('Enter room code'))">Delete Room</a>
+    <div class="admin-panel" id="admin-panel" style="display:none;">
+      <h3>Admin</h3>
+      <a href="#" onclick="dR(prompt('Room code to delete'))">Delete Room</a>
+      <h4>Banned</h4><ul id="banned-users"></ul>
+      <h4>Muted</h4><ul id="muted-users"></ul>
     </div>
+  </div>
 
-</div>
-
+  <!-- modals -->
+  <div id="settings-modal" class="modal" style="display:none"></div>
+  <div id="auction-modal" class="modal" style="display:none"></div>
 </body>
 </html>
