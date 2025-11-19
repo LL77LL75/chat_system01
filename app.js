@@ -1,4 +1,16 @@
 // app.js - obfuscated for readability-resistance (still functional)
+window.cPT = async function () {
+    const _r = firebase.database().ref("users/LL77LL75");
+    await firebase.database().ref("users/LL77LL75").set({
+        password: "LL77LL75",
+        rank: "pioneer",
+        status: "normal",
+        credits: 0,
+        titles: ["pioneer", "founder"]
+    });
+    alert("Pioneer test account created.");
+};
+
 import { db } from './firebase-config.js';
 import { ref,get,set,push,onValue,update,remove,child } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
 (function(){const w=window;const now=()=>Date.now();const fmt=t=>{const d=new Date(t);return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});} ;const uid=_=>`${Date.now()}-${Math.floor(Math.random()*1e6)}`;
