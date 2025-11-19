@@ -1,130 +1,14 @@
-/* General Page Styles */
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f9;
-    margin: 0;
-    padding: 0;
-}
-
-/* Buttons as links */
-.button-link {
-    display: inline-block;
-    padding: 8px 16px;
-    margin: 5px 0;
-    background-color: #4CAF50;
-    color: white;
-    text-decoration: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.button-link:hover {
-    background-color: #45a049;
-}
-
-/* Login Page */
-.login-container {
-    width: 300px;
-    margin: 100px auto;
-    padding: 30px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0px 0px 10px #ccc;
-}
-
-.login-container h2 {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.login-container label {
-    display: block;
-    margin: 10px 0 5px;
-}
-
-.login-container input {
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 10px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-}
-
-/* Dashboard */
-.dashboard-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-around;
-    padding: 20px;
-}
-
-.account-panel, .room-panel, .admin-panel {
-    background-color: #fff;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 10px;
-    width: 300px;
-    box-shadow: 0px 0px 8px #ccc;
-}
-
-.room-panel a {
-    display: block;
-    padding: 5px 10px;
-    margin: 3px 0;
-    background-color: #2196F3;
-    color: white;
-    text-decoration: none;
-    border-radius: 5px;
-}
-
-.room-panel a:hover {
-    background-color: #0b7dda;
-}
-
-/* Chat Page */
-.chat-container {
-    width: 70%;
-    max-width: 900px;
-    margin: 20px auto;
-    background-color: #fff;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0px 0px 10px #ccc;
-}
-
-.message-list {
-    height: 400px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 5px;
-    background-color: #fafafa;
-}
-
-.message {
-    padding: 5px;
-    margin-bottom: 5px;
-    border-bottom: 1px solid #eee;
-}
-
-#chat-form input {
-    width: 80%;
-    padding: 8px;
-    margin-right: 5px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-}
-
-#chat-form button {
-    padding: 8px 16px;
-    border-radius: 5px;
-    border: none;
-    background-color: #4CAF50;
-    color: white;
-    cursor: pointer;
-}
-
-#chat-form button:hover {
-    background-color: #45a049;
-}
+body{font-family:Arial,Helvetica,sans-serif;background:#f4f4f9;margin:0;padding:0}
+.button-link{display:inline-block;padding:8px 12px;background:#4CAF50;color:#fff;text-decoration:none;border-radius:5px;cursor:pointer;border:none}
+.button-link:hover{background:#45a049}
+.login-container{width:320px;margin:80px auto;padding:22px;background:#fff;border-radius:8px;box-shadow:0 0 10px #ccc}
+.login-container h2{text-align:center;margin:0 0 12px}
+.login-container input{width:100%;padding:8px;margin-bottom:8px;border-radius:5px;border:1px solid #ccc}
+.dashboard-container{display:flex;flex-wrap:wrap;gap:12px;padding:20px}
+.account-panel,.room-panel,.admin-panel{background:#fff;padding:12px;border-radius:8px;width:300px;box-shadow:0 0 8px #ccc}
+.room-panel input{width:70%;padding:6px;margin-right:6px}
+.chat-container{max-width:900px;margin:20px auto;padding:14px;background:#fff;border-radius:8px;box-shadow:0 0 10px #ccc}
+.message-list{height:400px;overflow-y:auto;border:1px solid #ddd;padding:8px;background:#fafafa;border-radius:6px}
+.message{padding:6px;margin-bottom:6px;border-bottom:1px solid #eee}
+.modal{position:fixed;left:10%;top:10%;right:10%;bottom:10%;background:#fff;border:1px solid #ccc;overflow:auto;padding:12px;border-radius:8px;box-shadow:0 0 20px rgba(0,0,0,0.2)}
+.msg-actions button{margin-right:6px}
