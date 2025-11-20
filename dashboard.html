@@ -6,44 +6,163 @@
     <link rel="stylesheet" href="style.css">
     <script type="module" src="firebase-config.js"></script>
     <script type="module" src="app.js"></script>
+    <style>
+        /* Extra for account popup */
+        .popup { display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%);
+                 width: 400px; background: #fff; border-radius: 10px; box-shadow: 0 0 10px #aaa; padding: 20px; z-index: 100;}
+        .popup h3 { text-align:center; margin-bottom:15px; }
+        .popup input, .popup select { width: 90%; margin:5px 0; padding:5px; }
+        .popup button { margin-top:10px; padding:8px; width: 45%; margin-right:5%; }
+        .room-btn { margin-right: 5px; margin-bottom:5px; padding:5px 10px; background:#2196F3; color:white; border:none; border-radius:5px; cursor:pointer;}
+        .room-btn:hover { background:#0b7dda; }
+    </style>
 </head>
 <body>
 <div class="dashboard-container">
+
+    <!-- Account Panel -->
     <div class="account-panel">
         <h3>Account</h3>
         <button onclick="openAccountPopup()">Account</button>
-        <a href="index.html" class="button-link" onclick="logout()">Logout</a>
+        <a href="index.html" class="button-link">Logout</a>
+        <div id="core-pioneer-buttons" style="margin-top:10px;"></div>
     </div>
 
+    <!-- Room List -->
     <div class="room-panel">
         <h3>Rooms</h3>
         <div id="room-list">
-            <!-- Room buttons populated dynamically -->
+            <!-- Buttons populated dynamically -->
+        </div>
+        <div id="room-info" style="margin-top:10px; border:1px solid #ccc; padding:5px; min-height:50px;">
+            <!-- Users in room will appear here -->
         </div>
     </div>
 
-    <div class="admin-panel" id="admin-panel">
-        <h3>Admin Panel</h3>
-        <p>Banned Users:</p>
-        <ul id="banned-users"></ul>
-        <p>Muted Users:</p>
-        <ul id="muted-users"></ul>
-        <a href="#" onclick="createRoom(prompt('Enter room code'))">Create Room</a>
-        <a href="#" onclick="deleteRoom(prompt('Enter room code'))">Delete Room</a>
-        <a href="#" onclick="createAccount(prompt('Username'), prompt('Password'))">Create Account</a>
-    </div>
 </div>
 
 <!-- Account Popup -->
-<div id="account-popup" style="display:none;">
+<div class="popup" id="account-popup">
     <h3>Account Settings</h3>
-    <button onclick="_CHANGE_DISPLAY()">Change Display Name</button>
-    <button onclick="_CHANGE_PASSWORD()">Change Password</button>
-    <button onclick="startAuction()">Start Auction</button>
-    <button onclick="changeTitle()">Change Title</button>
+    <label>Display Name</label>
+    <input id="display-name-input" type="text">
+    <label>Password</label>
+    <input id="password-input" type="password">
+    <label>Equipped Title</label>
+    <select id="title-select"></select>
+    <button onclick="saveAccountChanges()">Save</button>
+    <button onclick="startAuctionPrompt()">Start Auction</button>
     <button onclick="openShop()">Open Shop</button>
-    <button onclick="logout()">Logout</button>
     <button onclick="closeAccountPopup()">Close</button>
 </div>
+
+<script type="module">
+import { db } from './firebase-config.js';
+import { ref, get, onValue, set, push, update } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
+
+window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+
+// Populate Rooms
+const roomListDiv = document.getElementById('room-list');
+const roomInfoDiv = document.getElementById('room-info');
+
+async function loadRooms(){
+    const roomsRef = ref(db, 'rooms');
+    const snap = await get(roomsRef);
+    roomListDiv.innerHTML = '';
+    if(snap.exists()){
+        const rooms = snap.val();
+        Object.keys(rooms).forEach(code=>{
+            const btn = document.createElement('button');
+            btn.textContent = code;
+            btn.className = 'room-btn';
+            btn.onclick = ()=>showRoomInfo(code);
+            roomListDiv.appendChild(btn);
+        });
+    }
+}
+loadRooms();
+
+// Show room info
+async function showRoomInfo(code){
+    const roomRef = ref(db, `rooms/${code}/members`);
+    const snap = await get(roomRef);
+    roomInfoDiv.innerHTML = `<strong>Users in ${code}:</strong><br>`;
+    if(snap.exists()){
+        const members = snap.val();
+        for(const [name, data] of Object.entries(members)){
+            let line = name;
+            if(window.currentUser.rank === 'admin' || window.currentUser.rank === 'high' || window.currentUser.rank==='core' || window.currentUser.rank==='pioneer'){
+                if(data.muted) line += ` (muted ${data.muted})`;
+                if(data.banned) line += ` (banned ${data.banned})`;
+            }
+            roomInfoDiv.innerHTML += line + '<br>';
+        }
+    } else {
+        roomInfoDiv.innerHTML += 'No members';
+    }
+}
+
+// Account Popup
+window.openAccountPopup = function(){
+    document.getElementById('account-popup').style.display = 'block';
+    document.getElementById('display-name-input').value = window.currentUser.displayName || '';
+    document.getElementById('password-input').value = window.currentUser.password || '';
+    const titleSelect = document.getElementById('title-select');
+    titleSelect.innerHTML = '';
+    (window.currentUser.titles||[]).forEach(t=>{
+        const opt = document.createElement('option');
+        opt.value = t; opt.textContent = t;
+        titleSelect.appendChild(opt);
+    });
+    titleSelect.value = window.currentUser.equippedTitle || '';
+};
+window.closeAccountPopup = ()=>document.getElementById('account-popup').style.display='none';
+window.saveAccountChanges = async function(){
+    const dn = document.getElementById('display-name-input').value;
+    const pw = document.getElementById('password-input').value;
+    const t = document.getElementById('title-select').value;
+    window.currentUser.displayName = dn;
+    window.currentUser.password = pw;
+    window.currentUser.equippedTitle = t;
+    await update(ref(db, `users/${window.currentUser.username}`), {
+        displayName: dn, password: pw, equippedTitle: t
+    });
+    alert('Saved changes');
+    closeAccountPopup();
+};
+
+// Core/Pioneer buttons for creating accounts
+window.addEventListener('load', ()=>{
+    if(window.currentUser.rank==='core'||window.currentUser.rank==='pioneer'){
+        const div = document.getElementById('core-pioneer-buttons');
+        const btn = document.createElement('button');
+        btn.textContent = 'Create Account';
+        btn.onclick = async ()=>{
+            const uname = prompt('Enter username');
+            const pw = prompt('Enter password');
+            if(!uname || !pw) return;
+            const userRef = ref(db, `users/${uname}`);
+            const snap = await get(userRef);
+            if(snap.exists()){ alert('User exists'); return; }
+            await set(userRef, {password: pw, rank:'newbie', titles:['newbie','newcomer'], credits:0, displayName: uname});
+            alert('Account created!');
+        };
+        div.appendChild(btn);
+    }
+});
+
+// Auction prompt
+window.startAuctionPrompt = function(){
+    const title = prompt('Auction title in quotes:');
+    const startingBid = parseInt(prompt('Starting bid:'),10);
+    const duration = parseInt(prompt('Duration in minutes:'),10)*60000;
+    if(title && startingBid && duration) window.startAuction(title, startingBid, duration);
+};
+
+// Shop placeholder
+window.openShop = function(){ alert('Shop placeholder (buy titles)'); };
+
+</script>
 </body>
 </html>
