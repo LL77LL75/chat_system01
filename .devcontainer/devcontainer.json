@@ -19,7 +19,7 @@
             "settings": {
                 "gitdoc.enabled": true,
                 "git.autofetch": true,
-                "gitdoc.autoCommitDelay": 100000
+                "gitdoc.autoCommitDelay": 5000
             }
         }
     }
