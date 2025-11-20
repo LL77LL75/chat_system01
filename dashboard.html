@@ -4,118 +4,118 @@
     <meta charset="UTF-8">
     <title>Chat App – Dashboard</title>
     <link rel="stylesheet" href="style.css">
-
-    <!-- Firebase -->
     <script type="module" src="firebase-config.js"></script>
-
-    <!-- App logic -->
     <script type="module" src="app.js"></script>
-
-    <!-- Dashboard/Room logic -->
     <script type="module" src="chat.js"></script>
-
-    <style>
-        .dashboard-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
-            padding: 20px;
-        }
-
-        .panel {
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 10px;
-            width: 320px;
-            box-shadow: 0 0 10px #ccc;
-        }
-
-        .room-btn {
-            display: inline-block;
-            margin: 4px 4px 4px 0;
-            padding: 6px 12px;
-            background-color: #2196F3;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        .room-btn:hover {
-            background-color: #0b7dda;
-        }
-
-        .button-link {
-            display: inline-block;
-            padding: 8px 16px;
-            margin: 5px 0;
-            background-color: #4CAF50;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .button-link:hover {
-            background-color: #45a049;
-        }
-
-        #roomMembers {
-            margin-top: 10px;
-        }
-
-        #adminControls a {
-            display: block;
-            margin: 3px 0;
-        }
-    </style>
 </head>
-
 <body>
 
 <div class="dashboard-container">
 
     <!-- Account Panel -->
-    <div class="panel">
+    <div class="account-panel">
         <h3>Account</h3>
-        <button class="button-link" onclick="window._accPop()">Settings</button>
-        <button class="button-link" onclick="window._LOGOUT()">Logout</button>
-
-        <!-- Core/Pioneer create accounts -->
-        <div id="createAccountBtns" style="margin-top:10px;"></div>
-    </div>
-
-    <!-- Rooms Panel -->
-    <div class="panel">
-        <h3>Rooms</h3>
-        <div id="roomList"></div>
-
-        <div id="roomMembers">
-            <h4>Room Members</h4>
-            <ul id="memberList"></ul>
-
-            <h4 id="bannedTitle" style="display:none;">Banned Users</h4>
-            <ul id="bannedList"></ul>
-
-            <h4 id="mutedTitle" style="display:none;">Muted Users</h4>
-            <ul id="mutedList"></ul>
+        <a href="#" class="button-link" onclick="_accPop()">Settings</a>
+        <a href="#" class="button-link" onclick="_LOGOUT()">Logout</a>
+        <div id="core-pioneer-create" style="margin-top:10px;">
+            <!-- Core/Pioneer can create accounts -->
+            <button onclick="_CREATE_USER()" style="display:none;" id="create-user-btn">Create User</button>
         </div>
     </div>
 
-    <!-- Admin Controls -->
-    <div class="panel" id="adminControls">
-        <h3>Admin Panel</h3>
-        <a href="#" onclick="window._CREATE_ROOM(prompt('Enter room code'))">Create Room</a>
-        <a href="#" onclick="window._DELETE_ROOM(prompt('Enter room code'))">Delete Room</a>
+    <!-- Room List -->
+    <div class="room-panel">
+        <h3>Rooms</h3>
+        <div id="room-list" style="display:flex; flex-wrap:wrap; gap:5px;">
+            <!-- Room buttons will be populated dynamically -->
+        </div>
+    </div>
+
+    <!-- Selected Room Panel -->
+    <div class="room-members-panel">
+        <h3>Members</h3>
+        <ul id="members-list"></ul>
+        <h4>Banned Users</h4>
+        <ul id="banned-users"></ul>
+        <h4>Muted Users</h4>
+        <ul id="muted-users"></ul>
+        <button onclick="_GO_CHAT(selectedRoom)">Join Selected Room</button>
     </div>
 
 </div>
 
-<script>
-    // room buttons and member panel updating handled by chat.js
-    // Only admin+ can see banned/muted users with levels/scope
-    // Clicking a room updates member panel without navigating
+<script type="module">
+import { db } from './firebase-config.js';
+import { ref, get, onValue } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
+
+let selectedRoom = null;
+
+// Show Create User button for Core/Pioneer
+if (["core","pioneer"].includes(window.currentUser.rank)) {
+    document.getElementById("create-user-btn").style.display = "block";
+}
+
+// Populate room buttons
+const roomsRef = ref(db, "rooms");
+onValue(roomsRef, snapshot => {
+    const roomListDiv = document.getElementById("room-list");
+    roomListDiv.innerHTML = "";
+    snapshot.forEach(child => {
+        const roomCode = child.key;
+        const btn = document.createElement("button");
+        btn.textContent = roomCode;
+        btn.style.marginRight = "5px";
+        btn.onclick = () => selectRoom(roomCode);
+        roomListDiv.appendChild(btn);
+    });
+});
+
+function selectRoom(roomCode){
+    selectedRoom = roomCode;
+
+    // Update members panel
+    const membersUl = document.getElementById("members-list");
+    const bannedUl = document.getElementById("banned-users");
+    const mutedUl = document.getElementById("muted-users");
+
+    membersUl.innerHTML = "";
+    bannedUl.innerHTML = "";
+    mutedUl.innerHTML = "";
+
+    const membersRef = ref(db, `rooms/${roomCode}/members`);
+    get(membersRef).then(snap => {
+        if (!snap.exists()) return;
+        const members = snap.val();
+        for (const username in members){
+            const li = document.createElement("li");
+            li.textContent = members[username].displayName;
+            membersUl.appendChild(li);
+        }
+    });
+
+    // Show banned/muted only if user is admin+
+    if (["admin","high","core","pioneer"].includes(window.currentUser.rank)){
+        const bansRef = ref(db, `rooms/${roomCode}/bans/users`);
+        get(bansRef).then(snap=>{
+            const bans = snap.exists()? snap.val(): {};
+            for (const u in bans){
+                const li = document.createElement("li");
+                li.textContent = `${u} (Level ${bans[u]})`;
+                bannedUl.appendChild(li);
+            }
+        });
+
+        const mutesRef = ref(db, `rooms/${roomCode}/mutes/users`);
+        get(mutesRef).then(snap=>{
+            const mutes = snap.exists()? snap.val(): {};
+            for (const u in mutes){
+                const li = document.createElement("li");
+                li.textContent = `${u} (Level ${mutes[u]})`;
+                mutedUl.appendChild(li);
+            }
+        });
+    }
+}
 </script>
 
 </body>
