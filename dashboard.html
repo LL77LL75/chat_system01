@@ -9,114 +9,68 @@
     <script type="module" src="chat.js"></script>
 </head>
 <body>
-
 <div class="dashboard-container">
 
-    <!-- Account Panel -->
-    <div class="account-panel">
-        <h3>Account</h3>
-        <a href="#" class="button-link" onclick="_accPop()">Settings</a>
-        <a href="#" class="button-link" onclick="_LOGOUT()">Logout</a>
-        <div id="core-pioneer-create" style="margin-top:10px;">
-            <!-- Core/Pioneer can create accounts -->
-            <button onclick="_CREATE_USER()" style="display:none;" id="create-user-btn">Create User</button>
-        </div>
-    </div>
+    <!-- Account Panel Button -->
+    <button onclick="document.getElementById('account-popup').style.display='block'" class="button-link">Account</button>
 
-    <!-- Room List -->
+    <!-- Room Buttons -->
     <div class="room-panel">
         <h3>Rooms</h3>
-        <div id="room-list" style="display:flex; flex-wrap:wrap; gap:5px;">
-            <!-- Room buttons will be populated dynamically -->
+        <div id="room-list" style="display:flex; gap:5px; flex-wrap:wrap;">
+            <!-- Rooms buttons dynamically created by JS -->
         </div>
     </div>
 
-    <!-- Selected Room Panel -->
-    <div class="room-members-panel">
-        <h3>Members</h3>
-        <ul id="members-list"></ul>
-        <h4>Banned Users</h4>
-        <ul id="banned-users"></ul>
-        <h4>Muted Users</h4>
-        <ul id="muted-users"></ul>
-        <button onclick="_GO_CHAT(selectedRoom)">Join Selected Room</button>
+    <!-- Admin Core/Pioneer Create Accounts -->
+    <div id="create-account-panel" style="margin-top:20px;">
+        <button class="button-link" onclick="_CREATE_USER()" style="display:none;" id="core-create-btn">Create Account</button>
     </div>
 
 </div>
 
-<script type="module">
-import { db } from './firebase-config.js';
-import { ref, get, onValue } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
+<!-- Account Popup -->
+<div id="account-popup" style="display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%); background:#fff; padding:20px; border-radius:10px; box-shadow:0 0 10px #000; z-index:1000; width:300px;">
+    <h3>Account Settings</h3>
+    <button class="button-link" onclick="_accPop()">Change Display Name</button>
+    <button class="button-link" onclick="_accPop()">Change Password</button>
+    <button class="button-link" onclick="startAuction(prompt('Title?'), prompt('Starting bid?'), prompt('Duration in minutes?'))">Start Auction</button>
+    <button class="button-link" onclick="alert('Change equipped title (placeholder)')">Change Title</button>
+    <button class="button-link" onclick="openShop()">Open Shop</button>
+    <button class="button-link" onclick="_LOGOUT()">Logout</button>
+    <br><br>
+    <button onclick="document.getElementById('account-popup').style.display='none'" class="button-link">Close</button>
+</div>
 
-let selectedRoom = null;
-
-// Show Create User button for Core/Pioneer
-if (["core","pioneer"].includes(window.currentUser.rank)) {
-    document.getElementById("create-user-btn").style.display = "block";
-}
-
-// Populate room buttons
-const roomsRef = ref(db, "rooms");
-onValue(roomsRef, snapshot => {
-    const roomListDiv = document.getElementById("room-list");
-    roomListDiv.innerHTML = "";
-    snapshot.forEach(child => {
-        const roomCode = child.key;
-        const btn = document.createElement("button");
-        btn.textContent = roomCode;
-        btn.style.marginRight = "5px";
-        btn.onclick = () => selectRoom(roomCode);
-        roomListDiv.appendChild(btn);
-    });
-});
-
-function selectRoom(roomCode){
-    selectedRoom = roomCode;
-
-    // Update members panel
-    const membersUl = document.getElementById("members-list");
-    const bannedUl = document.getElementById("banned-users");
-    const mutedUl = document.getElementById("muted-users");
-
-    membersUl.innerHTML = "";
-    bannedUl.innerHTML = "";
-    mutedUl.innerHTML = "";
-
-    const membersRef = ref(db, `rooms/${roomCode}/members`);
-    get(membersRef).then(snap => {
-        if (!snap.exists()) return;
-        const members = snap.val();
-        for (const username in members){
-            const li = document.createElement("li");
-            li.textContent = members[username].displayName;
-            membersUl.appendChild(li);
+<script>
+    // Show create account button if user is core/pioneer
+    window.addEventListener('load', () => {
+        const user = JSON.parse(localStorage.getItem("currentUser") || "{}");
+        if(["core","pioneer"].includes(user.rank)){
+            document.getElementById('core-create-btn').style.display='inline-block';
         }
     });
 
-    // Show banned/muted only if user is admin+
-    if (["admin","high","core","pioneer"].includes(window.currentUser.rank)){
-        const bansRef = ref(db, `rooms/${roomCode}/bans/users`);
-        get(bansRef).then(snap=>{
-            const bans = snap.exists()? snap.val(): {};
-            for (const u in bans){
-                const li = document.createElement("li");
-                li.textContent = `${u} (Level ${bans[u]})`;
-                bannedUl.appendChild(li);
-            }
-        });
-
-        const mutesRef = ref(db, `rooms/${roomCode}/mutes/users`);
-        get(mutesRef).then(snap=>{
-            const mutes = snap.exists()? snap.val(): {};
-            for (const u in mutes){
-                const li = document.createElement("li");
-                li.textContent = `${u} (Level ${mutes[u]})`;
-                mutedUl.appendChild(li);
-            }
+    // Load room buttons
+    async function loadRooms() {
+        const roomsRef = ref(db, "rooms");
+        onValue(roomsRef, snapshot => {
+            const roomList = document.getElementById("room-list");
+            roomList.innerHTML = "";
+            snapshot.forEach(child=>{
+                const code = child.key;
+                const btn = document.createElement("button");
+                btn.textContent = code;
+                btn.classList.add("button-link");
+                btn.style.marginRight="5px";
+                // On click, show room info panel (members/banned/muted)
+                btn.onclick = () => window.loadRoomInfo();
+                roomList.appendChild(btn);
+            });
         });
     }
-}
-</script>
 
+    loadRooms();
+</script>
 </body>
 </html>
