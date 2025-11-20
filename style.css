@@ -1,207 +1,226 @@
-/* GENERAL */
+/* =================== General Page Styles =================== */
 body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
     margin: 0;
     padding: 0;
-    background: #f3f3f7;
-    font-family: Arial, sans-serif;
-    color: #222;
-}
-
-button, .button-link {
-    cursor: pointer;
 }
 
 .button-link {
     display: inline-block;
-    padding: 8px 14px;
-    background: #4c8ef7;
-    color: #fff;
-    border-radius: 6px;
-    margin: 4px 0;
+    padding: 8px 16px;
+    margin: 5px 0;
+    background-color: #4CAF50;
+    color: white;
     text-decoration: none;
-    border: none;
-    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
 .button-link:hover {
-    background: #3372d8;
+    background-color: #45a049;
 }
 
-/* LOGIN */
+/* =================== Login Page =================== */
 .login-container {
     width: 320px;
-    background: white;
-    padding: 25px;
+    margin: 120px auto;
+    padding: 30px;
+    background-color: #fff;
     border-radius: 10px;
-    margin: 80px auto;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    box-shadow: 0 0 12px #aaa;
+}
+
+.login-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.login-container label {
+    display: block;
+    margin: 10px 0 5px;
 }
 
 .login-container input {
     width: 100%;
     padding: 8px;
-    margin: 6px 0 14px;
-    border-radius: 6px;
+    margin-bottom: 12px;
+    border-radius: 5px;
     border: 1px solid #ccc;
 }
 
-/* DASHBOARD */
+.btn {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+    margin-top: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 6px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.btn:hover {
+    background-color: #45a049;
+}
+
+/* =================== Dashboard =================== */
 .dashboard-container {
     display: flex;
-    gap: 25px;
-    padding: 25px;
-    justify-content: center;
     flex-wrap: wrap;
+    justify-content: space-around;
+    padding: 20px;
 }
 
-.account-panel, .room-panel, .room-info-panel {
-    background: white;
-    padding: 18px;
-    border-radius: 10px;
-    width: 300px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+.panel {
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px;
+    width: 320px;
+    box-shadow: 0 0 10px #ccc;
 }
 
-.room-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.room-list button {
-    background: #2f82ff;
+.room-btn {
+    display: inline-block;
+    margin: 4px 4px 4px 0;
+    padding: 6px 12px;
+    background-color: #2196F3;
     color: white;
-    border: none;
-    padding: 10px;
+    text-decoration: none;
     border-radius: 6px;
-    text-align: center;
-    font-size: 14px;
+    cursor: pointer;
 }
 
-.room-list button:hover {
-    background: #1a63d6;
+.room-btn:hover {
+    background-color: #0b7dda;
 }
 
-/* CHAT */
+#roomMembers {
+    margin-top: 10px;
+}
+
+#roomMembers ul {
+    padding-left: 20px;
+}
+
+#adminControls a {
+    display: block;
+    margin: 3px 0;
+}
+
+/* =================== Chat =================== */
 .chat-container {
-    width: 80%;
-    max-width: 950px;
-    margin: 25px auto;
-    padding: 18px;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 2px 14px rgba(0,0,0,0.15);
-}
-
-.chat-top-bar {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 14px;
+    width: 70%;
+    max-width: 900px;
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px #ccc;
 }
 
 .message-list {
-    height: 450px;
+    height: 400px;
     overflow-y: auto;
-    padding: 10px;
     border: 1px solid #ddd;
-    background: #fafafa;
-    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: #fafafa;
 }
 
 .message {
-    padding: 8px;
-    margin-bottom: 12px;
-    background: #eef2ff;
-    border-radius: 6px;
-    border: 1px solid #d1daf9;
+    padding: 5px;
+    margin-bottom: 5px;
+    border-bottom: 1px solid #eee;
 }
 
-.message .meta {
+.message .reaction {
     font-size: 12px;
-    color: #666;
-}
-
-.message .reacts {
-    margin-top: 5px;
-    font-size: 12px;
-    color: #444;
-}
-
-/* join/leave system */
-.join-msg, .leave-msg {
-    color: #777;
-    font-size: 12px;
-    margin: 6px 0;
-}
-
-/* HIDDEN PRIVATE MSG TAG */
-.hidden-tag {
-    font-size: 10px;
-    color: #999;
-}
-
-/* FORM */
-#chat-form {
-    margin-top: 15px;
-    display: flex;
-    gap: 6px;
+    color: #555;
+    display: block;
+    margin-left: 15px;
 }
 
 #chat-form input {
-    flex: 1;
+    width: 75%;
     padding: 8px;
-    border-radius: 6px;
+    margin-right: 5px;
+    border-radius: 5px;
     border: 1px solid #ccc;
 }
 
-/* POPUPS */
-.popup-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    backdrop-filter: blur(4px);
-    background: rgba(0,0,0,0.4);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+#chat-form button {
+    padding: 8px 16px;
+    border-radius: 5px;
+    border: none;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
 }
 
+#chat-form button:hover {
+    background-color: #45a049;
+}
+
+.admin-panel {
+    margin-top: 20px;
+    background-color: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 0 8px #ccc;
+}
+
+.admin-panel a {
+    display: block;
+    margin: 3px 0;
+}
+
+/* =================== Popups =================== */
 .popup {
-    width: 350px;
-    background: white;
+    display: none;
+    position: fixed;
+    z-index: 999;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 14px rgba(0,0,0,0.25);
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 15px #000;
+    min-width: 280px;
 }
 
-.popup input, .popup select {
-    width: 100%;
-    padding: 8px;
-    margin: 6px 0 14px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
+.popup h3 {
+    margin-top: 0;
 }
 
 .popup button {
-    width: 100%;
-    padding: 10px;
-    margin-top: 6px;
-    background: #3c74ff;
+    margin-top: 10px;
+}
+
+/* =================== Shop/Auctions =================== */
+.shop-item {
+    display: flex;
+    justify-content: space-between;
+    margin: 5px 0;
+    padding: 4px 8px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+}
+
+.shop-item button {
+    padding: 4px 8px;
+    border-radius: 5px;
     border: none;
-    border-radius: 6px;
+    background-color: #4CAF50;
     color: white;
+    cursor: pointer;
 }
 
-/* SHOP LIST */
-#shop-list div {
-    padding: 8px;
-    border-bottom: 1px solid #ddd;
-}
-
-/* AUCTION LIST */
-#auction-list div {
-    padding: 8px;
-    border-bottom: 1px solid #ccc;
+.shop-item button:hover {
+    background-color: #45a049;
 }

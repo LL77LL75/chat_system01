@@ -2,131 +2,124 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Chat Room</title>
-
+    <title>Chat App – Chat Room</title>
     <link rel="stylesheet" href="style.css">
 
     <!-- Firebase -->
     <script type="module" src="firebase-config.js"></script>
 
-    <!-- Global logic -->
+    <!-- App logic -->
     <script type="module" src="app.js"></script>
 
-    <!-- CHAT LOGIC (next file, obfuscated) -->
+    <!-- Chat commands, reactions, auctions -->
     <script type="module" src="chat.js"></script>
 
-<style>
-    .msg{
-        padding:6px;border-bottom:1px solid #ddd;margin-bottom:4px;
-        position:relative;
-    }
-    .reactBox{
-        font-size:12px;margin-left:10px;color:#666;
-    }
-    .delBtn{
-        position:absolute;right:5px;top:5px;
-        font-size:10px;background:#e33;color:#fff;
-        border-radius:4px;padding:2px 5px;cursor:pointer;
-        display:none;
-    }
-    .msg:hover .delBtn{ display:inline-block; }
+    <style>
+        .chat-container {
+            width: 70%;
+            max-width: 900px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px #ccc;
+        }
 
-    .sysJoin{
-        color:#777;font-style:italic;font-size:12px;margin:4px 0;
-    }
-    #reactPopup{
-        display:none;position:fixed;top:50%;left:50%;
-        transform:translate(-50%,-50%);
-        background:#fff;padding:15px;border-radius:10px;
-        box-shadow:0 0 20px #0006;
-    }
-    .rBtn{
-        padding:6px 10px;margin:4px;background:#2196F3;
-        color:#fff;border-radius:6px;cursor:pointer;display:inline-block;
-    }
-</style>
+        #messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+
+        .message {
+            padding: 5px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .message .reaction {
+            font-size: 12px;
+            color: #555;
+            display: block;
+            margin-left: 15px;
+        }
+
+        #chat-form input {
+            width: 75%;
+            padding: 8px;
+            margin-right: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        #chat-form button {
+            padding: 8px 16px;
+            border-radius: 5px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        #chat-form button:hover {
+            background-color: #45a049;
+        }
+
+        .admin-panel {
+            margin-top: 20px;
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            box-shadow: 0 0 8px #ccc;
+        }
+
+        .admin-panel a {
+            display: block;
+            margin: 3px 0;
+        }
+    </style>
 </head>
 
 <body>
 
 <div class="chat-container">
 
-    <!-- Top Bar -->
-    <div style="display:flex; gap:10px; margin-bottom:10px;">
-        <button class="button-link" onclick="window._accPop()">Account</button>
-        <button class="button-link" onclick="window._SHOP()">Shop</button>
-        <button class="button-link" onclick="window._AUC()">Auctions</button>
-        <button class="button-link" onclick="window._LEAVE()">Leave</button>
-    </div>
-
-    <h3 id="roomName"></h3>
-
-    <!-- Messages -->
+    <!-- Chat Messages -->
     <div id="messages" class="message-list"></div>
 
-    <!-- Input -->
-    <form id="chat-form" 
-          onsubmit="event.preventDefault(); window._SEND_MSG();">
-        <input id="msgInput" type="text" placeholder="Type message..." required>
+    <!-- Message Input -->
+    <form id="chat-form" onsubmit="event.preventDefault(); sendMessage();">
+        <input id="message-input" type="text" placeholder="Type your message..." required>
         <button type="submit">Send</button>
     </form>
-</div>
 
+    <!-- Leave Chat -->
+    <a href="dashboard.html" class="button-link">Leave Chat</a>
 
-<!-- REACTION POPUP -->
-<div id="reactPopup">
-    <h4>Select Reaction</h4>
-    <div id="reactBtns"></div>
-    <button class="button-link" onclick="window._CLOSE_REACT()">Close</button>
-</div>
+    <!-- Admin Panel -->
+    <div class="admin-panel" id="adminPanel">
+        <h3>Admin Panel</h3>
 
+        <h4>Banned Users</h4>
+        <ul id="banned-users"></ul>
 
-<!-- ACCOUNT POPUP -->
-<div id="accPOP" class="popup-overlay" style="display:none;">
-    <div class="popup">
-        <h3>Account Settings</h3>
+        <h4>Muted Users</h4>
+        <ul id="muted-users"></ul>
 
-        <label>Display Name:</label><br>
-        <input id="aDisp" type="text"><br><br>
-
-        <label>Password:</label><br>
-        <input id="aPass" type="password"><br><br>
-
-        <label>Equipped Title:</label><br>
-        <select id="aTitle"></select><br><br>
-
-        <!-- Username change allowed only for core+pioneer -->
-        <div id="aUBlock" style="display:none;">
-            <label>Username:</label><br>
-            <input id="aUser" type="text"><br><br>
-        </div>
-
-        <button class="button-link" onclick="window._SAVE_ACC()">Save</button>
-        <button class="button-link" onclick="window._LOGOUT()">Logout</button>
-        <button class="button-link" onclick="window._CLOSE_ACC()">Close</button>
+        <a href="#" onclick="window._CREATE_ROOM(prompt('Enter room code'))">Create Room</a>
+        <a href="#" onclick="window._DELETE_ROOM(prompt('Enter room code'))">Delete Room</a>
     </div>
+
 </div>
 
-
-<!-- SHOP POPUP -->
-<div id="shopPOP" class="popup-overlay" style="display:none;">
-    <div class="popup">
-        <h3>Titles Shop</h3>
-        <div id="shopLIST"></div>
-        <button class="button-link" onclick="window._CLOSE_SHOP()">Close</button>
-    </div>
-</div>
-
-
-<!-- AUCTION POPUP -->
-<div id="aucPOP" class="popup-overlay" style="display:none;">
-    <div class="popup">
-        <h3>Auctions</h3>
-        <div id="aucLIST"></div>
-        <button class="button-link" onclick="window._CLOSE_AUC()">Close</button>
-    </div>
-</div>
-
+<script>
+    // Messages, reactions, auctions, join/leave announcements
+    // are all handled in chat.js
+</script>
 
 </body>
 </html>
