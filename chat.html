@@ -1,37 +1,38 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<title>Chat – Room</title>
-<link rel="stylesheet" href="style.css"/>
-<script type="module" src="firebase-config.js"></script>
-<script type="module" src="app.js"></script>
+  <meta charset="UTF-8">
+  <title>Chat App – Chat Room</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="firebase-config.js"></script>
+  <script type="module" src="app.js"></script>
 </head>
 <body>
-  <div class="chat-container">
-    <div id="messages" class="message-list"></div>
-
-    <div style="margin:10px 0;display:flex;gap:8px">
-      <button onclick="oAS()" class="button-link">Account</button>
-      <button onclick="oA()" class="button-link">Auctions</button>
+<div class="chat-container">
+  <header style="display:flex;justify-content:space-between;">
+    <h2 id="room-title">Room</h2>
+    <div>
+      <button class="button-link" onclick="openSettings()">Account</button>
+      <button class="button-link" onclick="openAuctions()">Auctions</button>
+      <button class="button-link" onclick="leaveRoom()">Leave</button>
     </div>
+  </header>
 
-    <form id="chat-form" onsubmit="event.preventDefault();sM();">
-      <label>Type your message:</label>
-      <input id="message-input" type="text" required/>
-      <button type="submit">Send</button>
-    </form>
+  <div id="messages" class="message-list"></div>
 
-    <a href="dashboard.html" class="button-link" onclick="lR()">Leave Chat</a>
+  <form id="chat-form" onsubmit="event.preventDefault(); sendMessage();">
+    <input id="message-input" type="text" placeholder="Type message or command">
+    <button class="button-link" type="submit">Send</button>
+  </form>
 
-    <div class="admin-panel" id="chat-admin" style="display:none;">
-      <h3>Admin Panel</h3>
-      <h4>Banned</h4><ul id="banned-users-chat"></ul>
-      <h4>Muted</h4><ul id="muted-users-chat"></ul>
-    </div>
+  <div id="chat-admin" style="display:none;">
+    <h4>Admin Panel</h4>
+    <p>Banned Users:</p>
+    <ul id="banned-users-chat"></ul>
+    <p>Muted Users:</p>
+    <ul id="muted-users-chat"></ul>
   </div>
 
-  <div id="settings-modal" class="modal" style="display:none"></div>
-  <div id="auction-modal" class="modal" style="display:none"></div>
+</div>
 </body>
 </html>

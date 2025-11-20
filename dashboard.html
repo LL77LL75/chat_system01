@@ -1,38 +1,43 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<title>Chat – Dashboard</title>
-<link rel="stylesheet" href="style.css"/>
-<script type="module" src="firebase-config.js"></script>
-<script type="module" src="app.js"></script>
+  <meta charset="UTF-8">
+  <title>Chat App – Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="firebase-config.js"></script>
+  <script type="module" src="app.js"></script>
 </head>
 <body>
-  <div class="dashboard-container">
-    <div class="account-panel">
-      <h3>Account</h3>
-      <p id="user-info">...</p>
-      <a href="#" class="button-link" onclick="oAS()">Account / Settings</a>
-      <a href="index.html" class="button-link" onclick="lO()">Logout</a>
-    </div>
-
-    <div class="room-panel">
-      <h3>Rooms</h3>
-      <div id="room-list">Loading...</div>
-      <input id="new-room-code" placeholder="New room code"/>
-      <button onclick="crR()">Create</button>
-    </div>
-
-    <div class="admin-panel" id="admin-panel" style="display:none;">
-      <h3>Admin</h3>
-      <a href="#" onclick="dR(prompt('Room code to delete'))">Delete Room</a>
-      <h4>Banned</h4><ul id="banned-users"></ul>
-      <h4>Muted</h4><ul id="muted-users"></ul>
-    </div>
+<div class="dashboard-container">
+  <div class="account-panel">
+    <h3>Account</h3>
+    <p id="user-info"></p>
+    <button class="button-link" onclick="openSettings()">Account / Settings</button>
+    <button class="button-link" id="create-account-btn" style="display:none" onclick="createAccount()">Create Account</button>
+    <button class="button-link" onclick="logout()">Logout</button>
   </div>
 
-  <!-- modals -->
-  <div id="settings-modal" class="modal" style="display:none"></div>
-  <div id="auction-modal" class="modal" style="display:none"></div>
+  <div class="room-panel">
+    <h3>Rooms</h3>
+    <div id="room-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    <input id="new-room-code" placeholder="New room code">
+    <button class="button-link" onclick="createRoom()">Create Room</button>
+  </div>
+
+  <div class="admin-panel" id="admin-panel" style="display:none">
+    <h3>Admin Panel</h3>
+    <p>Banned Users:</p>
+    <ul id="banned-users"></ul>
+    <p>Muted Users:</p>
+    <ul id="muted-users"></ul>
+    <button class="button-link" onclick="deleteRoom(prompt('Enter room code'))">Delete Room</button>
+  </div>
+
+  <div class="room-detail">
+    <h4>Selected Room: <span id="sel-room">—</span></h4>
+    <ul id="room-members"></ul>
+    <button class="button-link" onclick="joinSelected()">Join Selected Room</button>
+  </div>
+</div>
 </body>
 </html>

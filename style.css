@@ -1,14 +1,14 @@
-body{font-family:Arial,Helvetica,sans-serif;background:#f4f4f9;margin:0;padding:0}
-.button-link{display:inline-block;padding:8px 12px;background:#4CAF50;color:#fff;text-decoration:none;border-radius:5px;cursor:pointer;border:none}
-.button-link:hover{background:#45a049}
-.login-container{width:320px;margin:80px auto;padding:22px;background:#fff;border-radius:8px;box-shadow:0 0 10px #ccc}
-.login-container h2{text-align:center;margin:0 0 12px}
-.login-container input{width:100%;padding:8px;margin-bottom:8px;border-radius:5px;border:1px solid #ccc}
-.dashboard-container{display:flex;flex-wrap:wrap;gap:12px;padding:20px}
-.account-panel,.room-panel,.admin-panel{background:#fff;padding:12px;border-radius:8px;width:300px;box-shadow:0 0 8px #ccc}
-.room-panel input{width:70%;padding:6px;margin-right:6px}
-.chat-container{max-width:900px;margin:20px auto;padding:14px;background:#fff;border-radius:8px;box-shadow:0 0 10px #ccc}
-.message-list{height:400px;overflow-y:auto;border:1px solid #ddd;padding:8px;background:#fafafa;border-radius:6px}
-.message{padding:6px;margin-bottom:6px;border-bottom:1px solid #eee}
-.modal{position:fixed;left:10%;top:10%;right:10%;bottom:10%;background:#fff;border:1px solid #ccc;overflow:auto;padding:12px;border-radius:8px;box-shadow:0 0 20px rgba(0,0,0,0.2)}
-.msg-actions button{margin-right:6px}
+body{font-family:Arial,sans-serif;background:#f4f4f9;margin:0;padding:0;}
+.button-link{padding:8px 14px;background:#4CAF50;color:#fff;border:none;border-radius:5px;cursor:pointer;text-decoration:none;margin:4px;}
+.button-link:hover{background:#45a049;}
+.login-container{width:320px;margin:100px auto;padding:20px;background:#fff;border-radius:8px;box-shadow:0 0 10px #ccc;}
+.login-container input{width:100%;padding:6px;margin:4px 0;border-radius:5px;border:1px solid #ccc;}
+.dashboard-container{display:flex;flex-wrap:wrap;gap:12px;padding:16px;}
+.account-panel,.room-panel,.admin-panel{background:#fff;padding:12px;border-radius:8px;box-shadow:0 0 6px #ccc;width:300px;}
+.room-panel{display:flex;flex-wrap:wrap;gap:6px;}
+#room-list button{padding:6px 10px;border-radius:5px;border:1px solid #ccc;background:#2196F3;color:#fff;cursor:pointer;}
+.chat-container{max-width:900px;margin:20px auto;padding:14px;background:#fff;border-radius:8px;box-shadow:0 0 8px #ccc;}
+.message-list{height:400px;overflow-y:auto;border:1px solid #ddd;padding:8px;background:#fafafa;border-radius:6px;margin-bottom:10px;}
+.message{padding:6px;margin-bottom:6px;border-bottom:1px solid #eee;}
+.reaction{font-size:0.85em;color:#666;margin-top:4px;}
+.meta{font-size:0.75em;color:#999;margin-top:2px;}

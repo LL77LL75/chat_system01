@@ -1,4 +1,21 @@
+// Import Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
-const cfg={apiKey:"AIzaSyCY5_krGDfHcp4ZmUe5RXo7BaKYUQwAM8E",authDomain:"chat-app-6767.firebaseapp.com",databaseURL:"https://chat-app-6767-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"chat-app-6767",storageBucket:"chat-app-6767.firebasestorage.app",messagingSenderId:"705833150639",appId:"1:705833150639:web:618339099f129a4ccacc5a",measurementId:"G-3P9WH9S08E"};
-const a=initializeApp(cfg);export const db=getDatabase(a);
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+
+// Your Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyCY5_krGDfHcp4ZmUe5RXo7BaKYUQwAM8E",
+  authDomain: "chat-app-6767.firebaseapp.com",
+  databaseURL: "https://chat-app-6767-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "chat-app-6767",
+  storageBucket: "chat-app-6767.firebasestorage.app",
+  messagingSenderId: "705833150639",
+  appId: "1:705833150639:web:618339099f129a4ccacc5a",
+  measurementId: "G-3P9WH9S08E"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+export const db = getDatabase(app);
