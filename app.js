@@ -68,11 +68,6 @@ window._accPop = function(){
 // -------------------- Credits System --------------------
 const rankCredit = {
     newbie: {interval: 60000, timeout: 900000, nextRank: {credits:30, rank:"member"}}, // every 1min
-    member: {interval: 300000, timeout:1800000, nextRank: {credits:50, rank:"admin"}}, // every 5min
-    admin: {interval: 900000, timeout:7200000, nextRank: {credits:100, rank:"high"}}, // every 15min
-    high: {interval:1200000, timeout:18000000, nextRank: {credits:200, rank:"core"}}, // every 20min
-    core: {interval:2700000, timeout:null, nextRank: null}, // every 45min
-    pioneer: {interval:null, timeout:null, nextRank:null}
 };
 
 window.creditCheck = async function(){
