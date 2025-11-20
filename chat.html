@@ -1,32 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Chat App — Chat Room</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="style.css">
-  <script type="module" src="chat.js"></script>
-  <script type="module" src="app.js"></script>
+    <meta charset="UTF-8">
+    <title>Chat App – Chat Room</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="app.js"></script>
 </head>
 <body>
-  <div class="chat-container">
+<div class="chat-container">
+    <div id="messages" class="message-list"></div>
 
-    <!-- Room info panel -->
-    <div class="panel room-info-panel">
-      <h3>Room Info</h3>
-      <div id="room-info">Loading...</div>
-      <button class="button-link" onclick="window.leaveRoom()">Leave Chat</button>
-    </div>
-
-    <!-- Messages panel -->
-    <div class="message-list" id="messages"></div>
-
-    <!-- Input -->
-    <form id="chat-form" onsubmit="event.preventDefault(); window.sendMessage()">
-      <input id="message-input" placeholder="Enter message" required>
-      <button type="submit">Send</button>
+    <form id="chat-form" onsubmit="event.preventDefault(); sendMessage();">
+        <label for="message-input">Type your message:</label>
+        <input id="message-input" type="text" placeholder="Enter message" required>
+        <button type="submit">Send</button>
     </form>
 
-  </div>
+    <a href="dashboard.html" class="button-link" onclick="leaveRoom()">Leave Chat</a>
+
+    <div class="admin-panel">
+        <h3>Admin Panel</h3>
+        <p>Banned Users:</p>
+        <ul id="banned-users"></ul>
+        <p>Muted Users:</p>
+        <ul id="muted-users"></ul>
+        <a href="#" onclick="createRoom(prompt('Enter room code'))">Create Room</a>
+        <a href="#" onclick="deleteRoom(prompt('Enter room code'))">Delete Room</a>
+    </div>
+</div>
 </body>
 </html>
