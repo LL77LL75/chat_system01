@@ -4,86 +4,10 @@
     <meta charset="UTF-8">
     <title>Chat App – Chat Room</title>
     <link rel="stylesheet" href="style.css">
-
-    <!-- Firebase -->
     <script type="module" src="firebase-config.js"></script>
-
-    <!-- App logic -->
     <script type="module" src="app.js"></script>
-
-    <!-- Chat commands, reactions, auctions -->
     <script type="module" src="chat.js"></script>
-
-    <style>
-        .chat-container {
-            width: 70%;
-            max-width: 900px;
-            margin: 20px auto;
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px #ccc;
-        }
-
-        #messages {
-            height: 400px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            background-color: #fafafa;
-        }
-
-        .message {
-            padding: 5px;
-            margin-bottom: 5px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .message .reaction {
-            font-size: 12px;
-            color: #555;
-            display: block;
-            margin-left: 15px;
-        }
-
-        #chat-form input {
-            width: 75%;
-            padding: 8px;
-            margin-right: 5px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-
-        #chat-form button {
-            padding: 8px 16px;
-            border-radius: 5px;
-            border: none;
-            background-color: #4CAF50;
-            color: white;
-            cursor: pointer;
-        }
-
-        #chat-form button:hover {
-            background-color: #45a049;
-        }
-
-        .admin-panel {
-            margin-top: 20px;
-            background-color: #fff;
-            padding: 10px;
-            border-radius: 6px;
-            box-shadow: 0 0 8px #ccc;
-        }
-
-        .admin-panel a {
-            display: block;
-            margin: 3px 0;
-        }
-    </style>
 </head>
-
 <body>
 
 <div class="chat-container">
@@ -93,32 +17,39 @@
 
     <!-- Message Input -->
     <form id="chat-form" onsubmit="event.preventDefault(); sendMessage();">
-        <input id="message-input" type="text" placeholder="Type your message..." required>
+        <label for="message-input">Type your message:</label>
+        <input id="message-input" type="text" placeholder="Enter message" required>
         <button type="submit">Send</button>
     </form>
 
-    <!-- Leave Chat -->
-    <a href="dashboard.html" class="button-link">Leave Chat</a>
+    <!-- Leave Chat link -->
+    <a href="dashboard.html" class="button-link" onclick="leaveRoom(window.currentUser)">Leave Chat</a>
 
-    <!-- Admin Panel -->
-    <div class="admin-panel" id="adminPanel">
+    <!-- Admin Panel (Admin+) -->
+    <div class="admin-panel">
         <h3>Admin Panel</h3>
-
-        <h4>Banned Users</h4>
+        <p>Banned Users:</p>
         <ul id="banned-users"></ul>
 
-        <h4>Muted Users</h4>
+        <p>Muted Users:</p>
         <ul id="muted-users"></ul>
 
-        <a href="#" onclick="window._CREATE_ROOM(prompt('Enter room code'))">Create Room</a>
-        <a href="#" onclick="window._DELETE_ROOM(prompt('Enter room code'))">Delete Room</a>
+        <!-- Admin Commands (placeholder buttons) -->
+        <button onclick="startAuction(prompt('Title'), prompt('Starting bid'), prompt('Duration (min)'))">Start Auction</button>
+        <button onclick="alert('Delete Room feature placeholder')">Delete Room</button>
     </div>
 
 </div>
 
-<script>
-    // Messages, reactions, auctions, join/leave announcements
-    // are all handled in chat.js
+<script type="module">
+// Automatically load messages and join room
+window.addEventListener("load", () => {
+    if (window.location.pathname.includes("chat.html")) {
+        loadMessages();
+        joinRoom(window.currentUser);
+        window.addEventListener("beforeunload", () => leaveRoom(window.currentUser));
+    }
+});
 </script>
 
 </body>
