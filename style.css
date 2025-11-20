@@ -1,4 +1,4 @@
-/* =================== General Page Styles =================== */
+/* -------------------- General -------------------- */
 body {
     font-family: Arial, sans-serif;
     background-color: #f4f4f9;
@@ -6,7 +6,7 @@ body {
     padding: 0;
 }
 
-.button-link {
+.button-link, button {
     display: inline-block;
     padding: 8px 16px;
     margin: 5px 0;
@@ -15,20 +15,21 @@ body {
     text-decoration: none;
     border-radius: 5px;
     cursor: pointer;
+    border: none;
 }
 
-.button-link:hover {
+.button-link:hover, button:hover {
     background-color: #45a049;
 }
 
-/* =================== Login Page =================== */
+/* -------------------- Login -------------------- */
 .login-container {
-    width: 320px;
-    margin: 120px auto;
+    width: 300px;
+    margin: 100px auto;
     padding: 30px;
     background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 0 12px #aaa;
+    border-radius: 8px;
+    box-shadow: 0px 0px 10px #ccc;
 }
 
 .login-container h2 {
@@ -44,29 +45,12 @@ body {
 .login-container input {
     width: 100%;
     padding: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     border-radius: 5px;
     border: 1px solid #ccc;
 }
 
-.btn {
-    display: inline-block;
-    width: 100%;
-    text-align: center;
-    padding: 10px;
-    margin-top: 10px;
-    background-color: #4CAF50;
-    color: white;
-    border-radius: 6px;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.btn:hover {
-    background-color: #45a049;
-}
-
-/* =================== Dashboard =================== */
+/* -------------------- Dashboard -------------------- */
 .dashboard-container {
     display: flex;
     flex-wrap: wrap;
@@ -74,44 +58,33 @@ body {
     padding: 20px;
 }
 
-.panel {
+.account-panel, .room-panel, .admin-panel, .room-members-panel {
     background-color: #fff;
     padding: 15px;
     border-radius: 8px;
     margin: 10px;
-    width: 320px;
-    box-shadow: 0 0 10px #ccc;
+    width: 300px;
+    box-shadow: 0px 0px 8px #ccc;
 }
 
-.room-btn {
-    display: inline-block;
-    margin: 4px 4px 4px 0;
+.room-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.room-panel button {
+    margin: 2px;
     padding: 6px 12px;
-    background-color: #2196F3;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
     cursor: pointer;
 }
 
-.room-btn:hover {
-    background-color: #0b7dda;
+.room-members-panel ul {
+    list-style: none;
+    padding-left: 5px;
 }
 
-#roomMembers {
-    margin-top: 10px;
-}
-
-#roomMembers ul {
-    padding-left: 20px;
-}
-
-#adminControls a {
-    display: block;
-    margin: 3px 0;
-}
-
-/* =================== Chat =================== */
+/* -------------------- Chat -------------------- */
 .chat-container {
     width: 70%;
     max-width: 900px;
@@ -119,7 +92,7 @@ body {
     background-color: #fff;
     padding: 15px;
     border-radius: 8px;
-    box-shadow: 0 0 10px #ccc;
+    box-shadow: 0px 0px 10px #ccc;
 }
 
 .message-list {
@@ -138,15 +111,14 @@ body {
     border-bottom: 1px solid #eee;
 }
 
-.message .reaction {
-    font-size: 12px;
-    color: #555;
-    display: block;
-    margin-left: 15px;
+.reaction {
+    font-size: 0.75em;
+    margin-left: 5px;
+    color: #666;
 }
 
 #chat-form input {
-    width: 75%;
+    width: 80%;
     padding: 8px;
     margin-right: 5px;
     border-radius: 5px;
@@ -166,61 +138,13 @@ body {
     background-color: #45a049;
 }
 
-.admin-panel {
-    margin-top: 20px;
-    background-color: #fff;
-    padding: 10px;
-    border-radius: 6px;
-    box-shadow: 0 0 8px #ccc;
+/* -------------------- Admin Panel -------------------- */
+.admin-panel ul {
+    list-style: none;
+    padding-left: 5px;
 }
 
-.admin-panel a {
-    display: block;
-    margin: 3px 0;
-}
-
-/* =================== Popups =================== */
-.popup {
-    display: none;
-    position: fixed;
-    z-index: 999;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    padding: 20px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 0 15px #000;
-    min-width: 280px;
-}
-
-.popup h3 {
-    margin-top: 0;
-}
-
-.popup button {
-    margin-top: 10px;
-}
-
-/* =================== Shop/Auctions =================== */
-.shop-item {
-    display: flex;
-    justify-content: space-between;
-    margin: 5px 0;
-    padding: 4px 8px;
-    background-color: #f0f0f0;
-    border-radius: 5px;
-}
-
-.shop-item button {
-    padding: 4px 8px;
-    border-radius: 5px;
-    border: none;
-    background-color: #4CAF50;
-    color: white;
-    cursor: pointer;
-}
-
-.shop-item button:hover {
-    background-color: #45a049;
+.admin-panel button {
+    margin-top: 5px;
+    width: 100%;
 }
