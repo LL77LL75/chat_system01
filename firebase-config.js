@@ -19,5 +19,5 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 
-// Export database instance for app.js and chat.js
+// Export database reference
 export const db = getDatabase(app);
