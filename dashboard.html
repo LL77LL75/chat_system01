@@ -1,43 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Chat App – Dashboard</title>
-  <link rel="stylesheet" href="style.css">
-  <script type="module" src="firebase-config.js"></script>
-  <script type="module" src="app.js"></script>
+    <meta charset="UTF-8">
+    <title>Chat App – Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="dashboard.js"></script>
+    <script type="module" src="app.js"></script>
 </head>
 <body>
+
 <div class="dashboard-container">
-  <div class="account-panel">
-    <h3>Account</h3>
-    <p id="user-info"></p>
-    <button class="button-link" onclick="openSettings()">Account / Settings</button>
-    <button class="button-link" id="create-account-btn" style="display:none" onclick="createAccount()">Create Account</button>
-    <button class="button-link" onclick="logout()">Logout</button>
-  </div>
 
-  <div class="room-panel">
-    <h3>Rooms</h3>
-    <div id="room-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-    <input id="new-room-code" placeholder="New room code">
-    <button class="button-link" onclick="createRoom()">Create Room</button>
-  </div>
+    <!-- ACCOUNT PANEL -->
+    <div class="account-panel">
+        <h3>Account</h3>
 
-  <div class="admin-panel" id="admin-panel" style="display:none">
-    <h3>Admin Panel</h3>
-    <p>Banned Users:</p>
-    <ul id="banned-users"></ul>
-    <p>Muted Users:</p>
-    <ul id="muted-users"></ul>
-    <button class="button-link" onclick="deleteRoom(prompt('Enter room code'))">Delete Room</button>
-  </div>
+        <button class="button-link" onclick="window.__ACC_POP()">Account Settings</button>
+        <button class="button-link" onclick="window.__LG0()">Logout</button>
 
-  <div class="room-detail">
-    <h4>Selected Room: <span id="sel-room">—</span></h4>
-    <ul id="room-members"></ul>
-    <button class="button-link" onclick="joinSelected()">Join Selected Room</button>
-  </div>
+        <!-- Core + Pioneer Create Account -->
+        <button id="create-acc-btn" class="button-link" style="display:none;"
+                onclick="window.__CR_ACC()">Create Account</button>
+
+        <!-- Titles Shop -->
+        <button class="button-link" onclick="window.__SHOP()">Titles Shop</button>
+
+        <!-- Auctions -->
+        <button class="button-link" onclick="window.__AUC()">Auctions</button>
+    </div>
+
+
+
+    <!-- ROOM LIST PANEL -->
+    <div class="room-panel">
+        <h3>Rooms</h3>
+        <div id="room-list" class="room-list"></div>
+    </div>
+
+
+
+    <!-- ROOM INFO PANEL (updated on room button click) -->
+    <div class="room-info-panel">
+        <h3>Room Info</h3>
+        <div id="room-info">Click a room to view details</div>
+
+        <button id="join-btn" class="button-link" style="display:none;"
+                onclick="window.__JN_RM()">Join Room</button>
+    </div>
+
 </div>
+
+
+<!-- ACCOUNT POPUP -->
+<div id="account-popup" class="popup-overlay" style="display:none;">
+    <div class="popup">
+        <h3>Account Settings</h3>
+
+        <label>Display Name:</label>
+        <input id="acc-displayname" type="text">
+
+        <label>Equipped Title:</label>
+        <select id="acc-title"></select>
+
+        <label>Password:</label>
+        <input id="acc-pass" type="password">
+
+        <!-- Username change only for Core/Pioneer -->
+        <div id="acc-username-section" style="display:none;">
+            <label>Username:</label>
+            <input id="acc-username" type="text">
+        </div>
+
+        <button onclick="window.__SV_ACC()">Save</button>
+        <button onclick="window.__CL_ACC()">Close</button>
+    </div>
+</div>
+
+
+
+<!-- SHOP POPUP -->
+<div id="shop-popup" class="popup-overlay" style="display:none;">
+    <div class="popup">
+        <h3>Titles Shop</h3>
+        <div id="shop-list"></div>
+        <button onclick="window.__CL_SHOP()">Close</button>
+    </div>
+</div>
+
+
+<!-- AUCTIONS POPUP -->
+<div id="auction-popup" class="popup-overlay" style="display:none;">
+    <div class="popup">
+        <h3>Auctions</h3>
+        <div id="auction-list"></div>
+        <button onclick="window.__CL_AUC()">Close</button>
+    </div>
+</div>
+
 </body>
 </html>
