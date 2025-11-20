@@ -21,4 +21,4 @@ getAnalytics(app);
 
 // Export database for modules
 export const db = getDatabase(app);
-const analytics = getAnalytics(app); // Comment this out if analytics not required
+const analytics = getAnalytics(app);
