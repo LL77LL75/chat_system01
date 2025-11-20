@@ -111,11 +111,11 @@ window.openShop = async function() {
 // -------------------- Credits System --------------------
 const rankCredits = {
     newbie: {gain:1, timeout:15*60*1000, rankUp:30},
-    member: {gain:1, timeout:30*60*1000, rankUp:0}, // placeholder
-    admin: {gain:1, timeout:2*60*60*1000, rankUp:0},
-    high: {gain:1, timeout:5*60*60*1000, rankUp:0},
-    core: {gain:1, timeout:0, rankUp:0},
-    pioneer: {gain:0, timeout:0, rankUp:0}
+    member: {gain:1, timeout:30*60*1000}, // placeholder
+    admin: {gain:1, timeout:2*60*60*1000},
+    high: {gain:1, timeout:5*60*60*1000},
+    core: {gain:1, timeout:0},
+    pioneer: {gain:0, timeout:0}
 };
 
 window.checkCredits = async function() {
