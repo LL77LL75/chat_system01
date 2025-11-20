@@ -1,4 +1,6 @@
-/* -------------------- General -------------------- */
+/* ----------------------- */
+/* General Styles */
+/* ----------------------- */
 body {
     font-family: Arial, sans-serif;
     background-color: #f4f4f9;
@@ -6,6 +8,15 @@ body {
     padding: 0;
 }
 
+h2, h3 {
+    margin: 0 0 10px 0;
+}
+
+button, input, a {
+    font-family: inherit;
+}
+
+/* Buttons as links */
 .button-link, button {
     display: inline-block;
     padding: 8px 16px;
@@ -14,17 +25,19 @@ body {
     color: white;
     text-decoration: none;
     border-radius: 5px;
-    cursor: pointer;
     border: none;
+    cursor: pointer;
 }
 
 .button-link:hover, button:hover {
     background-color: #45a049;
 }
 
-/* -------------------- Login -------------------- */
+/* ----------------------- */
+/* Login Page */
+/* ----------------------- */
 .login-container {
-    width: 300px;
+    width: 320px;
     margin: 100px auto;
     padding: 30px;
     background-color: #fff;
@@ -50,7 +63,9 @@ body {
     border: 1px solid #ccc;
 }
 
-/* -------------------- Dashboard -------------------- */
+/* ----------------------- */
+/* Dashboard */
+/* ----------------------- */
 .dashboard-container {
     display: flex;
     flex-wrap: wrap;
@@ -58,7 +73,7 @@ body {
     padding: 20px;
 }
 
-.account-panel, .room-panel, .admin-panel, .room-members-panel {
+.account-panel, .room-panel, .admin-panel {
     background-color: #fff;
     padding: 15px;
     border-radius: 8px;
@@ -67,24 +82,33 @@ body {
     box-shadow: 0px 0px 8px #ccc;
 }
 
-.room-panel {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
+.room-panel a {
+    display: inline-block;
+    padding: 5px 10px;
+    margin: 3px 3px 3px 0; /* small gap between buttons */
+    background-color: #2196F3;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
 }
 
-.room-panel button {
-    margin: 2px;
-    padding: 6px 12px;
-    cursor: pointer;
+.room-panel a:hover {
+    background-color: #0b7dda;
 }
 
-.room-members-panel ul {
-    list-style: none;
-    padding-left: 5px;
+/* Admin Panel Lists */
+.admin-panel ul {
+    list-style-type: none;
+    padding-left: 0;
 }
 
-/* -------------------- Chat -------------------- */
+.admin-panel li {
+    margin: 3px 0;
+}
+
+/* ----------------------- */
+/* Chat Page */
+/* ----------------------- */
 .chat-container {
     width: 70%;
     max-width: 900px;
@@ -93,6 +117,8 @@ body {
     padding: 15px;
     border-radius: 8px;
     box-shadow: 0px 0px 10px #ccc;
+    display: flex;
+    flex-direction: column;
 }
 
 .message-list {
@@ -111,14 +137,19 @@ body {
     border-bottom: 1px solid #eee;
 }
 
-.reaction {
-    font-size: 0.75em;
-    margin-left: 5px;
-    color: #666;
+.message.system {
+    color: gray;
+    font-style: italic;
+}
+
+/* Input */
+#chat-form {
+    display: flex;
+    margin-top: 5px;
 }
 
 #chat-form input {
-    width: 80%;
+    flex-grow: 1;
     padding: 8px;
     margin-right: 5px;
     border-radius: 5px;
@@ -127,24 +158,68 @@ body {
 
 #chat-form button {
     padding: 8px 16px;
+}
+
+/* ----------------------- */
+/* Account Popup Panel */
+/* ----------------------- */
+.account-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    z-index: 1000;
+    display: none;
+    width: 400px;
+}
+
+.account-popup h3 {
+    margin-top: 0;
+}
+
+.account-popup input, .account-popup select {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 6px;
     border-radius: 5px;
-    border: none;
-    background-color: #4CAF50;
-    color: white;
+    border: 1px solid #ccc;
+}
+
+.account-popup .popup-buttons {
+    display: flex;
+    justify-content: space-between;
+}
+
+/* ----------------------- */
+/* Reactions below messages */
+.reactions {
+    font-size: 12px;
+    margin-top: 2px;
+    color: #555;
+}
+
+.reaction {
+    display: inline-block;
+    margin-right: 5px;
     cursor: pointer;
 }
 
-#chat-form button:hover {
-    background-color: #45a049;
+/* ----------------------- */
+/* Auctions panel placeholder */
+.auction-panel {
+    margin-top: 10px;
+    border-top: 1px solid #ccc;
+    padding-top: 10px;
 }
 
-/* -------------------- Admin Panel -------------------- */
-.admin-panel ul {
-    list-style: none;
-    padding-left: 5px;
-}
-
-.admin-panel button {
-    margin-top: 5px;
-    width: 100%;
+/* ----------------------- */
+/* Shop panel placeholder */
+.shop-panel {
+    margin-top: 10px;
+    border-top: 1px solid #ccc;
+    padding-top: 10px;
 }
