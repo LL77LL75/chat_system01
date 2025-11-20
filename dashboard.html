@@ -6,71 +6,147 @@
     <link rel="stylesheet" href="style.css">
     <script type="module" src="firebase-config.js"></script>
     <script type="module" src="app.js"></script>
-    <script type="module" src="chat.js"></script>
 </head>
 <body>
+
 <div class="dashboard-container">
 
-    <!-- Account Panel Button -->
-    <button onclick="document.getElementById('account-popup').style.display='block'" class="button-link">Account</button>
-
-    <!-- Room Buttons -->
-    <div class="room-panel">
-        <h3>Rooms</h3>
-        <div id="room-list" style="display:flex; gap:5px; flex-wrap:wrap;">
-            <!-- Rooms buttons dynamically created by JS -->
-        </div>
+    <!-- Account Panel -->
+    <div class="account-panel">
+        <h3>Account</h3>
+        <button onclick="document.getElementById('account-popup').style.display='block'" class="button-link">Account</button>
+        <a href="index.html" class="button-link">Logout</a>
     </div>
 
-    <!-- Admin Core/Pioneer Create Accounts -->
-    <div id="create-account-panel" style="margin-top:20px;">
-        <button class="button-link" onclick="_CREATE_USER()" style="display:none;" id="core-create-btn">Create Account</button>
+    <!-- Room List -->
+    <div class="room-panel">
+        <h3>Rooms</h3>
+        <div id="room-list" style="display:flex; flex-wrap:wrap; gap:5px;"></div>
+        <div id="selected-room-info"></div>
+    </div>
+
+    <!-- Admin Panel (Pioneer/Core only) -->
+    <div class="admin-panel" id="admin-panel" style="display:none;">
+        <h3>Admin Panel</h3>
+        <p>Banned Users:</p>
+        <ul id="banned-users"></ul>
+
+        <p>Muted Users:</p>
+        <ul id="muted-users"></ul>
+
+        <!-- Create Room and Delete Room Links -->
+        <button onclick="createRoom(prompt('Enter room code'))" class="button-link">Create Room</button>
+        <button onclick="deleteRoom(prompt('Enter room code'))" class="button-link">Delete Room</button>
+
+        <!-- Create Account Buttons for Core/Pioneer -->
+        <button onclick="createUserPrompt()" class="button-link">Create Account</button>
     </div>
 
 </div>
 
 <!-- Account Popup -->
-<div id="account-popup" style="display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%); background:#fff; padding:20px; border-radius:10px; box-shadow:0 0 10px #000; z-index:1000; width:300px;">
+<div id="account-popup" style="display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%);
+    background:#fff; padding:20px; border-radius:10px; box-shadow:0 0 10px #000; z-index:1000; width:300px;">
     <h3>Account Settings</h3>
-    <button class="button-link" onclick="_accPop()">Change Display Name</button>
-    <button class="button-link" onclick="_accPop()">Change Password</button>
+    <button class="button-link" onclick="_CHANGE_DISPLAY()">Change Display Name</button>
+    <button class="button-link" onclick="_CHANGE_PASSWORD()">Change Password</button>
     <button class="button-link" onclick="startAuction(prompt('Title?'), prompt('Starting bid?'), prompt('Duration in minutes?'))">Start Auction</button>
-    <button class="button-link" onclick="alert('Change equipped title (placeholder)')">Change Title</button>
+    
+    <label for="change-title">Change Title</label>
+    <select id="change-title" onchange="_CHANGE_TITLE(this.value)">
+        <!-- Options populated dynamically -->
+    </select>
+
     <button class="button-link" onclick="openShop()">Open Shop</button>
     <button class="button-link" onclick="_LOGOUT()">Logout</button>
     <br><br>
     <button onclick="document.getElementById('account-popup').style.display='none'" class="button-link">Close</button>
 </div>
 
-<script>
-    // Show create account button if user is core/pioneer
-    window.addEventListener('load', () => {
-        const user = JSON.parse(localStorage.getItem("currentUser") || "{}");
-        if(["core","pioneer"].includes(user.rank)){
-            document.getElementById('core-create-btn').style.display='inline-block';
-        }
+<script type="module">
+import { db, ref, onValue, set } from './firebase-config.js';
+
+const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+
+// -------------------- Load Room Buttons --------------------
+const roomListDiv = document.getElementById("room-list");
+const selectedRoomInfoDiv = document.getElementById("selected-room-info");
+
+const roomsRef = ref(db, "rooms");
+onValue(roomsRef, snapshot=>{
+    roomListDiv.innerHTML = "";
+    snapshot.forEach(child=>{
+        const roomCode = child.key;
+        const btn = document.createElement("button");
+        btn.innerText = roomCode;
+        btn.style.marginRight = "5px";
+        btn.onclick = ()=>loadRoomInfo(roomCode);
+        roomListDiv.appendChild(btn);
+    });
+});
+
+// -------------------- Load Selected Room Info --------------------
+window.loadRoomInfo = function(roomCode){
+    const membersPanelHTML = `<b>Members in ${roomCode}:</b><br>`;
+    selectedRoomInfoDiv.innerHTML = membersPanelHTML;
+
+    const membersRef = ref(db, `rooms/${roomCode}/members`);
+    onValue(membersRef, snapshot=>{
+        let html = `<b>Members in ${roomCode}:</b><br>`;
+        snapshot.forEach(child=>{
+            html += `${child.key}<br>`;
+        });
+        selectedRoomInfoDiv.innerHTML = html;
     });
 
-    // Load room buttons
-    async function loadRooms() {
-        const roomsRef = ref(db, "rooms");
-        onValue(roomsRef, snapshot => {
-            const roomList = document.getElementById("room-list");
-            roomList.innerHTML = "";
-            snapshot.forEach(child=>{
-                const code = child.key;
-                const btn = document.createElement("button");
-                btn.textContent = code;
-                btn.classList.add("button-link");
-                btn.style.marginRight="5px";
-                // On click, show room info panel (members/banned/muted)
-                btn.onclick = () => window.loadRoomInfo();
-                roomList.appendChild(btn);
-            });
+    if(["admin","high","core","pioneer"].includes(currentUser.rank)){
+        const bannedRef = ref(db, `rooms/${roomCode}/bans`);
+        onValue(bannedRef, snapshot=>{
+            let html = `<b>Banned Users:</b><br>`;
+            snapshot.forEach(child=> html += `${child.key} (Level ${child.val().level})<br>`);
+            selectedRoomInfoDiv.innerHTML += html;
+        });
+
+        const mutedRef = ref(db, `rooms/${roomCode}/mutes`);
+        onValue(mutedRef, snapshot=>{
+            let html = `<b>Muted Users:</b><br>`;
+            snapshot.forEach(child=> html += `${child.key} (Level ${child.val().level})<br>`);
+            selectedRoomInfoDiv.innerHTML += html;
         });
     }
+};
 
-    loadRooms();
+// -------------------- Account Popup: Populate Titles Dropdown --------------------
+const changeTitleSelect = document.getElementById("change-title");
+const titlesRef = ref(db, `users/${currentUser.username}/titles`);
+onValue(titlesRef, snapshot=>{
+    changeTitleSelect.innerHTML = "";
+    snapshot.forEach(child=>{
+        const opt = document.createElement("option");
+        opt.value = child.key;
+        opt.text = child.key;
+        changeTitleSelect.appendChild(opt);
+    });
+});
+
+// -------------------- Core/Pioneer Create Account --------------------
+window.createUserPrompt = async function(){
+    const username = prompt("Enter new username");
+    const password = prompt("Enter password");
+    const displayName = prompt("Enter display name");
+
+    if(!username || !password || !displayName) return;
+
+    const userRef = ref(db, `users/${username}`);
+    await set(userRef, {password, displayName, rank:"newbie", titles:{"newbie":"newbie"}, credits:0});
+    alert(`Account ${username} created successfully!`);
+};
+
+// -------------------- Admin Panel Visibility --------------------
+if(["core","pioneer"].includes(currentUser.rank)){
+    document.getElementById("admin-panel").style.display="block";
+}
 </script>
+
 </body>
 </html>
