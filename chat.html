@@ -1,131 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Chat App – Chat Room</title>
-    <link rel="stylesheet" href="style.css">
-    <script type="module" src="firebase-config.js"></script>
-    <script type="module" src="app.js"></script>
-    <script type="module" src="chat.js"></script>
+  <meta charset="UTF-8">
+  <title>Chat App — Chat Room</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="chat.js"></script>
+  <script type="module" src="app.js"></script>
 </head>
 <body>
+  <div class="chat-container">
 
-<div class="chat-container">
+    <!-- Room info panel -->
+    <div class="panel room-info-panel">
+      <h3>Room Info</h3>
+      <div id="room-info">Loading...</div>
+      <button class="button-link" onclick="window.leaveRoom()">Leave Chat</button>
+    </div>
 
-    <!-- Chat Messages -->
-    <div id="messages" class="message-list"></div>
+    <!-- Messages panel -->
+    <div class="message-list" id="messages"></div>
 
-    <!-- Message Input -->
-    <form id="chat-form" onsubmit="event.preventDefault(); sendMessage();">
-        <label for="message-input">Type your message:</label>
-        <input id="message-input" type="text" placeholder="Enter message" required>
-        <button type="submit">Send</button>
+    <!-- Input -->
+    <form id="chat-form" onsubmit="event.preventDefault(); window.sendMessage()">
+      <input id="message-input" placeholder="Enter message" required>
+      <button type="submit">Send</button>
     </form>
 
-    <!-- Room Info Panel -->
-    <div class="room-panel">
-        <h3>Room Info</h3>
-        <div id="members-panel"></div>
-        <div id="banned-panel"></div>
-        <div id="muted-panel"></div>
-    </div>
-
-    <!-- Admin Buttons -->
-    <div id="admin-panel">
-        <button onclick="createRoom(prompt('Enter room code'))" class="button-link">Create Room</button>
-        <button onclick="deleteRoom(prompt('Enter room code'))" class="button-link">Delete Room</button>
-    </div>
-
-    <!-- Leave Chat -->
-    <a href="dashboard.html" class="button-link">Leave Chat</a>
-
-    <!-- Account Popup -->
-    <button onclick="document.getElementById('account-popup').style.display='block'" class="button-link">Account</button>
-    <div id="account-popup" style="display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%);
-        background:#fff; padding:20px; border-radius:10px; box-shadow:0 0 10px #000; z-index:1000; width:300px;">
-        <h3>Account Settings</h3>
-        <button class="button-link" onclick="_CHANGE_DISPLAY()">Change Display Name</button>
-        <button class="button-link" onclick="_CHANGE_PASSWORD()">Change Password</button>
-        <button class="button-link" onclick="startAuction(prompt('Title?'), prompt('Starting bid?'), prompt('Duration in minutes?'))">Start Auction</button>
-        <button class="button-link" onclick="_CHANGE_TITLE()">Change Title</button>
-        <button class="button-link" onclick="openShop()">Open Shop</button>
-        <button class="button-link" onclick="_LOGOUT()">Logout</button>
-        <br><br>
-        <button onclick="document.getElementById('account-popup').style.display='none'" class="button-link">Close</button>
-    </div>
-
-</div>
-
-<script>
-    import { db, ref, onValue } from './firebase-config.js';
-
-    // Load room info dynamically
-    window.loadRoomInfo = function(){
-        const roomCode = new URLSearchParams(window.location.search).get("room");
-        const membersPanel = document.getElementById("members-panel");
-        const bannedPanel = document.getElementById("banned-panel");
-        const mutedPanel = document.getElementById("muted-panel");
-
-        const roomRef = ref(db, "rooms/" + roomCode + "/members");
-        onValue(roomRef, snapshot => {
-            membersPanel.innerHTML = "<b>Members:</b><br>";
-            snapshot.forEach(child => {
-                const member = child.key;
-                membersPanel.innerHTML += member + "<br>";
-            });
-        });
-
-        const bansRef = ref(db, "rooms/" + roomCode + "/bans");
-        onValue(bansRef, snapshot => {
-            bannedPanel.innerHTML = "<b>Banned Users:</b><br>";
-            snapshot.forEach(child => {
-                bannedPanel.innerHTML += child.key + "<br>";
-            });
-        });
-
-        const mutesRef = ref(db, "rooms/" + roomCode + "/mutes");
-        onValue(mutesRef, snapshot => {
-            mutedPanel.innerHTML = "<b>Muted Users:</b><br>";
-            snapshot.forEach(child => {
-                mutedPanel.innerHTML += child.key + "<br>";
-            });
-        });
-    };
-
-    // Load messages and join/leave messages
-    window.addEventListener("load", () => {
-        const roomCode = new URLSearchParams(window.location.search).get("room");
-        const messagesRef = ref(db, `messages/${roomCode}`);
-        const messagesContainer = document.getElementById("messages");
-
-        onValue(messagesRef, snapshot => {
-            messagesContainer.innerHTML = "";
-            snapshot.forEach(child => {
-                const msg = child.val();
-                const msgDiv = document.createElement("div");
-                msgDiv.classList.add("message");
-
-                let text = `[${msg.sender}]: ${msg.message}`;
-                if(msg.hidden) text += " (hidden)";
-
-                msgDiv.innerHTML = text;
-
-                // Display reactions below
-                if(msg.reactions){
-                    const rDiv = document.createElement("div");
-                    rDiv.style.fontSize="smaller";
-                    for(const [rUser, rVal] of Object.entries(msg.reactions)){
-                        rDiv.innerHTML += `${rUser}: ${rVal} `;
-                    }
-                    msgDiv.appendChild(rDiv);
-                }
-
-                messagesContainer.appendChild(msgDiv);
-            });
-        });
-    });
-
-</script>
-
+  </div>
 </body>
 </html>

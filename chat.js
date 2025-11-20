@@ -1,158 +1,113 @@
-import { db, ref, push, onValue, get, set, update } from './firebase-config.js';
+// chat.js
+import { db } from './firebase-config.js';
+import { ref, push, onValue, update, get, remove } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
 
-const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-const roomCode = new URLSearchParams(window.location.search).get("room");
-
-if(!currentUser.username || !roomCode) {
-    alert("Invalid session");
-    window.location.href = "index.html";
+// -----------------------
+// Utility to get room code from URL
+// -----------------------
+function getRoomCode() {
+  return new URLSearchParams(window.location.search).get("room") || "global";
 }
 
-// -------------------- Room Join --------------------
-const roomMembersRef = ref(db, `rooms/${roomCode}/members/${currentUser.username}`);
-set(roomMembersRef, {joinedAt: Date.now(), rank: currentUser.rank});
-
-// Push join message
-const messagesRef = ref(db, `messages/${roomCode}`);
-push(messagesRef, {
-    sender: currentUser.username,
-    message: getJoinMessage(currentUser.rank, currentUser.displayName),
-    timestamp: Date.now(),
-    system:true
-});
-
-// -------------------- Room Leave --------------------
-window.addEventListener("beforeunload", async ()=>{
-    const roomMembersRef = ref(db, `rooms/${roomCode}/members/${currentUser.username}`);
-    await set(roomMembersRef, null);
-
-    // Push leave message
-    const messagesRef = ref(db, `messages/${roomCode}`);
-    await push(messagesRef, {
-        sender: currentUser.username,
-        message: getLeaveMessage(currentUser.rank, currentUser.displayName),
-        timestamp: Date.now(),
-        system:true
-    });
-});
-
-// -------------------- Join/Leave Message Generators --------------------
-function getJoinMessage(rank, name){
-    if(["newbie","member","admin"].includes(rank)) return `${name} has joined the chat`;
-    if(["high","core"].includes(rank)) return `${name} joins the chat...`;
-    if(rank === "pioneer") return "A GOD HAS ARRIVED";
-    return `${name} has joined`;
+// -----------------------
+// Show join/leave messages depending on rank
+// -----------------------
+async function announceJoinLeave(user, action) {
+  const messagesRef = ref(db, `messages/${getRoomCode()}`);
+  const rank = user.rank || "newbie";
+  let text = "";
+  if (action === "join") {
+    if (["newbie","member","admin"].includes(rank)) text = `[${user.displayName}] has joined the chat`;
+    else if (["high","core"].includes(rank)) text = `[${user.displayName}] joins the chat...`;
+    else text = `A GOD HAS ARRIVED`;
+  } else {
+    if (["newbie","member","admin"].includes(rank)) text = `[${user.displayName}] has left the chat`;
+    else if (["high","core"].includes(rank)) text = `[${user.displayName}] leaves the chat...`;
+    else text = `[${user.displayName}] has left`;
+  }
+  await push(messagesRef, { sender: "system", message: text, timestamp: Date.now(), type: "system" });
 }
 
-function getLeaveMessage(rank, name){
-    if(["newbie","member","admin"].includes(rank)) return `${name} has left the chat`;
-    if(["high","core"].includes(rank)) return `${name} leaves the chat...`;
-    if(rank === "pioneer") return `${name} has left`;
-    return `${name} has left`;
-}
-
-// -------------------- Load Messages --------------------
-const messagesContainer = document.getElementById("messages");
-const messagesRefRoom = ref(db, `messages/${roomCode}`);
-
-onValue(messagesRefRoom, snapshot=>{
-    messagesContainer.innerHTML="";
-    snapshot.forEach(child=>{
-        const msg = child.val();
-        const msgDiv = document.createElement("div");
-        msgDiv.classList.add("message");
-
-        // System messages gray
-        if(msg.system) msgDiv.style.color="#888";
-
-        let text = msg.system ? msg.message : `[${msg.sender}]: ${msg.message}`;
-        if(msg.hidden) text += " (hidden)";
-
-        msgDiv.innerHTML = text;
-
-        // Reactions
-        if(msg.reactions){
-            const rDiv = document.createElement("div");
-            rDiv.style.fontSize="smaller";
-            for(const [rUser, rVal] of Object.entries(msg.reactions)){
-                rDiv.innerHTML += `${rUser}: ${rVal} `;
-            }
-            msgDiv.appendChild(rDiv);
-        }
-
-        messagesContainer.appendChild(msgDiv);
-    });
-});
-
-// -------------------- Reactions --------------------
-window.reactMessage = async function(messageKey, reaction){
-    const msgRef = ref(db, `messages/${roomCode}/${messageKey}/reactions/${currentUser.username}`);
-    await set(msgRef, reaction);
+// -----------------------
+// Send chat message
+// -----------------------
+window.sendMessage = async function() {
+  const input = document.getElementById("message-input");
+  const msg = input.value.trim();
+  if (!msg) return;
+  const roomCode = getRoomCode();
+  const messagesRef = ref(db, `messages/${roomCode}`);
+  await push(messagesRef, { sender: window.currentUser.username, displayName: window.currentUser.displayName, message: msg, timestamp: Date.now() });
+  input.value = "";
 };
 
-// -------------------- Commands --------------------
-window.sendCommand = async function(cmdText){
-    const parts = cmdText.trim().split(" ");
-    const cmd = parts[0];
-    const args = parts.slice(1);
+// -----------------------
+// Load messages
+// -----------------------
+window.loadMessages = function() {
+  const roomCode = getRoomCode();
+  const messagesRef = ref(db, `messages/${roomCode}`);
+  const messagesContainer = document.getElementById("messages");
+  messagesContainer.innerHTML = "";
 
-    switch(cmd){
-        case "?/msg":
-            if(!["member","admin","high","core","pioneer"].includes(currentUser.rank)) return alert("Cannot send private message");
-            const targetUser = args[0];
-            const message = args.slice(1).join(" ").replace(/["]+/g,"");
-            const pmRef = ref(db, `pm/${targetUser}/${Date.now()}`);
-            await set(pmRef, {from:currentUser.username, message, hidden:true});
-            break;
-        case "?/ban":
-        case "?/mute":
-        case "?/unban":
-        case "?/unmute":
-        case "?/kick":
-            if(!["admin","high","core","pioneer"].includes(currentUser.rank)) return alert("Insufficient rank");
-            // TODO: implement levels/scope based on rank
-            break;
-        case "?/auction":
-            if(!args.length) return alert("Usage ?/auction [title] [startbid] [time]");
-            const title = args[0].replace(/["]+/g,"");
-            const startBid = parseInt(args[1]);
-            const timeMinutes = parseInt(args[2]);
-            await window.startAuction(title,startBid,timeMinutes);
-            break;
-        case "?/give":
-            if(!["pioneer"].includes(currentUser.rank)) return alert("Cannot give");
-            // TODO: implement credit/title giving
-            break;
-        case "?/rank":
-            if(!["pioneer"].includes(currentUser.rank)) return alert("Cannot rank");
-            const target = args[0];
-            const newRank = args[1];
-            const targetRef = ref(db, `users/${target}/rank`);
-            await set(targetRef, newRank);
-            break;
-        default:
-            console.log("Unknown command");
-    }
+  onValue(messagesRef, snapshot => {
+    messagesContainer.innerHTML = "";
+    snapshot.forEach(child => {
+      const msg = child.val();
+      const div = document.createElement("div");
+      div.className = "message";
+      if(msg.type === "system") div.style.color = "gray";
+      div.innerHTML = `[${msg.displayName || msg.sender}]: ${msg.message}`;
+      messagesContainer.appendChild(div);
+    });
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  });
 };
 
-// -------------------- Load Room Members --------------------
-const membersPanel = document.getElementById("members-panel");
-onValue(ref(db, `rooms/${roomCode}/members`), snapshot=>{
-    membersPanel.innerHTML="<b>Members:</b><br>";
-    snapshot.forEach(child=>{
-        membersPanel.innerHTML += child.key + "<br>";
-    });
-});
+// -----------------------
+// Join room
+// -----------------------
+window.joinSelected = async function() {
+  const roomCode = getRoomCode();
+  const roomRef = ref(db, `rooms/${roomCode}/members/${window.currentUser.username}`);
+  await set(roomRef, { displayName: window.currentUser.displayName, rank: window.currentUser.rank });
+  await announceJoinLeave(window.currentUser, "join");
+  alert(`Joined room ${roomCode}!`);
+  loadMessages();
+};
 
-const bannedPanel = document.getElementById("banned-panel");
-const mutedPanel = document.getElementById("muted-panel");
-if(["admin","high","core","pioneer"].includes(currentUser.rank)){
-    onValue(ref(db, `rooms/${roomCode}/bans`), snapshot=>{
-        bannedPanel.innerHTML="<b>Banned:</b><br>";
-        snapshot.forEach(child=>bannedPanel.innerHTML+=`${child.key}<br>`);
+// -----------------------
+// Leave room
+// -----------------------
+window.leaveRoom = async function() {
+  const roomCode = getRoomCode();
+  const roomRef = ref(db, `rooms/${roomCode}/members/${window.currentUser.username}`);
+  await remove(roomRef);
+  await announceJoinLeave(window.currentUser, "leave");
+  window.location.href = "dashboard.html";
+};
+
+// -----------------------
+// Track join/leave in dashboard for room info
+// -----------------------
+window.loadRoomInfo = async function(roomCode) {
+  const infoContainer = document.getElementById("room-info");
+  const roomMembersRef = ref(db, `rooms/${roomCode}/members`);
+  onValue(roomMembersRef, snapshot => {
+    let html = "";
+    snapshot.forEach(child => {
+      const u = child.val();
+      html += `<div>${u.displayName} (${u.rank})</div>`;
     });
-    onValue(ref(db, `rooms/${roomCode}/mutes`), snapshot=>{
-        mutedPanel.innerHTML="<b>Muted:</b><br>";
-        snapshot.forEach(child=>mutedPanel.innerHTML+=`${child.key}<br>`);
-    });
-}
+    infoContainer.innerHTML = html || "No one is in this room yet.";
+  });
+};
+
+// -----------------------
+// Auto run on load
+// -----------------------
+window.addEventListener("load", () => {
+  if (window.location.pathname.includes("chat.html")) {
+    loadMessages();
+  }
+});
