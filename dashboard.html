@@ -7,7 +7,6 @@
     <script type="module" src="firebase-config.js"></script>
     <script type="module" src="app.js"></script>
     <style>
-        /* Extra for account popup */
         .popup { display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%);
                  width: 400px; background: #fff; border-radius: 10px; box-shadow: 0 0 10px #aaa; padding: 20px; z-index: 100;}
         .popup h3 { text-align:center; margin-bottom:15px; }
@@ -31,12 +30,8 @@
     <!-- Room List -->
     <div class="room-panel">
         <h3>Rooms</h3>
-        <div id="room-list">
-            <!-- Buttons populated dynamically -->
-        </div>
-        <div id="room-info" style="margin-top:10px; border:1px solid #ccc; padding:5px; min-height:50px;">
-            <!-- Users in room will appear here -->
-        </div>
+        <div id="room-list"></div>
+        <div id="room-info" style="margin-top:10px; border:1px solid #ccc; padding:5px; min-height:50px;"></div>
     </div>
 
 </div>
@@ -62,17 +57,15 @@ import { ref, get, onValue, set, push, update } from 'https://www.gstatic.com/fi
 
 window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
 
-// Populate Rooms
+// Rooms
 const roomListDiv = document.getElementById('room-list');
 const roomInfoDiv = document.getElementById('room-info');
-
 async function loadRooms(){
     const roomsRef = ref(db, 'rooms');
     const snap = await get(roomsRef);
     roomListDiv.innerHTML = '';
     if(snap.exists()){
-        const rooms = snap.val();
-        Object.keys(rooms).forEach(code=>{
+        Object.keys(snap.val()).forEach(code=>{
             const btn = document.createElement('button');
             btn.textContent = code;
             btn.className = 'room-btn';
@@ -83,24 +76,20 @@ async function loadRooms(){
 }
 loadRooms();
 
-// Show room info
 async function showRoomInfo(code){
     const roomRef = ref(db, `rooms/${code}/members`);
     const snap = await get(roomRef);
     roomInfoDiv.innerHTML = `<strong>Users in ${code}:</strong><br>`;
     if(snap.exists()){
-        const members = snap.val();
-        for(const [name, data] of Object.entries(members)){
-            let line = name;
-            if(window.currentUser.rank === 'admin' || window.currentUser.rank === 'high' || window.currentUser.rank==='core' || window.currentUser.rank==='pioneer'){
+        Object.entries(snap.val()).forEach(([name,data])=>{
+            let line=name;
+            if(['admin','high','core','pioneer'].includes(window.currentUser.rank)){
                 if(data.muted) line += ` (muted ${data.muted})`;
                 if(data.banned) line += ` (banned ${data.banned})`;
             }
-            roomInfoDiv.innerHTML += line + '<br>';
-        }
-    } else {
-        roomInfoDiv.innerHTML += 'No members';
-    }
+            roomInfoDiv.innerHTML += line+'<br>';
+        });
+    } else roomInfoDiv.innerHTML += 'No members';
 }
 
 // Account Popup
@@ -112,7 +101,7 @@ window.openAccountPopup = function(){
     titleSelect.innerHTML = '';
     (window.currentUser.titles||[]).forEach(t=>{
         const opt = document.createElement('option');
-        opt.value = t; opt.textContent = t;
+        opt.value=t; opt.textContent=t;
         titleSelect.appendChild(opt);
     });
     titleSelect.value = window.currentUser.equippedTitle || '';
@@ -132,37 +121,34 @@ window.saveAccountChanges = async function(){
     closeAccountPopup();
 };
 
-// Core/Pioneer buttons for creating accounts
+// Core/Pioneer buttons
 window.addEventListener('load', ()=>{
-    if(window.currentUser.rank==='core'||window.currentUser.rank==='pioneer'){
+    if(['core','pioneer'].includes(window.currentUser.rank)){
         const div = document.getElementById('core-pioneer-buttons');
         const btn = document.createElement('button');
         btn.textContent = 'Create Account';
         btn.onclick = async ()=>{
             const uname = prompt('Enter username');
             const pw = prompt('Enter password');
-            if(!uname || !pw) return;
+            if(!uname||!pw) return;
             const userRef = ref(db, `users/${uname}`);
             const snap = await get(userRef);
             if(snap.exists()){ alert('User exists'); return; }
-            await set(userRef, {password: pw, rank:'newbie', titles:['newbie','newcomer'], credits:0, displayName: uname});
+            await set(userRef,{password:pw,rank:'newbie',titles:['newbie','newcomer'],credits:0,displayName:uname});
             alert('Account created!');
         };
         div.appendChild(btn);
     }
 });
 
-// Auction prompt
+// Auctions
 window.startAuctionPrompt = function(){
     const title = prompt('Auction title in quotes:');
     const startingBid = parseInt(prompt('Starting bid:'),10);
     const duration = parseInt(prompt('Duration in minutes:'),10)*60000;
     if(title && startingBid && duration) window.startAuction(title, startingBid, duration);
 };
-
-// Shop placeholder
 window.openShop = function(){ alert('Shop placeholder (buy titles)'); };
-
 </script>
 </body>
 </html>
