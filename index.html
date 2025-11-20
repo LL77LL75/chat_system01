@@ -4,90 +4,22 @@
     <meta charset="UTF-8">
     <title>Chat App – Login</title>
     <link rel="stylesheet" href="style.css">
-
-    <!-- Firebase -->
     <script type="module" src="firebase-config.js"></script>
-
-    <!-- App logic -->
     <script type="module" src="app.js"></script>
-
-    <style>
-        .login-container {
-            width: 320px;
-            margin: 120px auto;
-            padding: 30px;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 0 12px #aaa;
-        }
-
-        .login-container h2 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .login-container label {
-            display: block;
-            margin: 10px 0 5px;
-        }
-
-        .login-container input {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 12px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-
-        .btn {
-            display: inline-block;
-            width: 100%;
-            text-align: center;
-            padding: 10px;
-            margin-top: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border-radius: 6px;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .btn:hover {
-            background-color: #45a049;
-        }
-
-        .info {
-            font-size: 12px;
-            color: #555;
-            margin-top: 8px;
-            text-align: center;
-        }
-    </style>
 </head>
-
 <body>
-    <div class="login-container">
-        <h2>Chat App Login</h2>
+<div class="login-container">
+    <h2>Login</h2>
+    <form id="login-form" onsubmit="event.preventDefault(); normalLogin();">
+        <label for="login-username">Username</label>
+        <input id="login-username" type="text" placeholder="Enter username" required>
 
-        <form id="login-form" onsubmit="event.preventDefault(); normalLogin();">
-            <label for="login-username">Username</label>
-            <input id="login-username" type="text" placeholder="Enter username" required>
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" placeholder="Enter password" required>
 
-            <label for="login-password">Password</label>
-            <input id="login-password" type="password" placeholder="Enter password" required>
-
-            <!-- LOGIN BUTTON -->
-            <a href="#" class="btn" onclick="normalLogin()">Login</a>
-        </form>
-
-        <div class="info">
-            Only Core and Pioneer accounts can create new users.<br>
-            Login with existing credentials to continue.
-        </div>
-    </div>
-
-    <script>
-        // Redirect is handled inside app.js normalLogin() after checking credentials.
-    </script>
+        <!-- LOGIN REDIRECT BUTTON -->
+        <a href="dashboard.html" class="btn button-link" onclick="normalLogin();">Login</a>
+    </form>
+</div>
 </body>
 </html>

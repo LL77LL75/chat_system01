@@ -1,151 +1,132 @@
 import { db } from './firebase-config.js';
-import { ref, set, get, push, onValue, update } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
+import { ref, get, set, push, onValue, update, remove } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
 
-// -------------------- Global --------------------
 window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
 
-// -------------------- Login / Logout --------------------
-window._LOGIN = async function(){
+// -------------------- Normal Login --------------------
+window.normalLogin = async function () {
     const username = document.getElementById("login-username").value.trim();
     const password = document.getElementById("login-password").value.trim();
-
     const userRef = ref(db, "users/" + username);
     const snap = await get(userRef);
-    if (!snap.exists()) { alert("User does not exist."); return; }
+    if (!snap.exists()) return alert("User does not exist.");
     const data = snap.val();
-    if (data.password !== password) { alert("Wrong password"); return; }
-
+    if (data.password !== password) return alert("Wrong password");
     window.currentUser = { username, ...data };
     localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
     window.location.href = "dashboard.html";
 };
 
-window._LOGOUT = function(){
+// -------------------- Account Functions --------------------
+window._LOGOUT = function() {
     localStorage.removeItem("currentUser");
     window.location.href = "index.html";
 };
 
-// -------------------- Core / Pioneer Account Creation --------------------
-window._CREATE_USER = async function(){
-    const uname = prompt("Enter username:");
-    const pwd = prompt("Enter password:");
-    if (!uname || !pwd) return;
-    const displayName = uname; // default displayName = username
-    const userRef = ref(db, "users/" + uname);
+window._CHANGE_DISPLAY = async function() {
+    const newName = prompt("Enter new display name:", window.currentUser.displayName);
+    if (!newName) return;
+    const userRef = ref(db, "users/" + window.currentUser.username + "/displayName");
+    await set(userRef, newName);
+    window.currentUser.displayName = newName;
+    localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+};
+
+window._CHANGE_PASSWORD = async function() {
+    const newPass = prompt("Enter new password:");
+    if (!newPass) return;
+    const passRef = ref(db, "users/" + window.currentUser.username + "/password");
+    await set(passRef, newPass);
+    window.currentUser.password = newPass;
+    localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+};
+
+window._CHANGE_TITLE = async function() {
+    const newTitle = prompt("Enter new equipped title:");
+    if (!newTitle) return;
+    const titleRef = ref(db, "users/" + window.currentUser.username + "/equippedTitle");
+    await set(titleRef, newTitle);
+    window.currentUser.equippedTitle = newTitle;
+    localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+};
+
+// -------------------- Create Accounts (Core/Pioneer) --------------------
+window._CREATE_USER = async function() {
+    const username = prompt("Enter username:");
+    const password = prompt("Enter password:");
+    if(!username || !password) return;
+    const displayName = username;
+    const rank = "newbie"; // default
+    const userRef = ref(db, "users/" + username);
     const snap = await get(userRef);
-    if (snap.exists()) { alert("User exists!"); return; }
-
-    await set(userRef, {
-        password: pwd,
-        rank: "newbie",
-        displayName: displayName,
-        credits: 0,
-        titles: ["newbie","newcomer"]
-    });
-    alert(`User ${uname} created.`);
+    if(snap.exists()) return alert("Username already exists.");
+    await set(userRef, {password, displayName, rank, equippedTitle:"none", credits:0});
+    alert("Account created successfully.");
 };
 
-// -------------------- Account Popup --------------------
-window._accPop = function(){
-    const newDisplayName = prompt("Change display name:", window.currentUser.displayName);
-    if (newDisplayName) {
-        window.currentUser.displayName = newDisplayName;
-        const userRef = ref(db, "users/" + window.currentUser.username);
-        update(userRef, { displayName: newDisplayName });
-        localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-        alert("Display name updated.");
-    }
-    const newPwd = prompt("Change password (leave blank to skip):","");
-    if (newPwd) {
-        window.currentUser.password = newPwd;
-        const userRef = ref(db, "users/" + window.currentUser.username);
-        update(userRef, { password: newPwd });
-        localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-        alert("Password updated.");
-    }
+// -------------------- Room Functions --------------------
+window.createRoom = async function(code) {
+    if(!code) return;
+    const roomRef = ref(db, "rooms/" + code);
+    const snap = await get(roomRef);
+    if(snap.exists()){ alert("Room exists."); return; }
+    await set(roomRef, { createdBy: window.currentUser.username, members:{}, bans:{}, mutes:{} });
+    alert("Room created.");
 };
 
-// -------------------- Credits System --------------------
-const rankCredit = {
-    newbie: {interval: 60000, timeout: 900000, nextRank: {credits:30, rank:"member"}}, // every 1min
+window.deleteRoom = async function(code) {
+    if(!code) return;
+    const roomRef = ref(db, "rooms/" + code);
+    await set(roomRef, null);
+    alert("Room deleted.");
 };
 
-window.creditCheck = async function(){
-    const userRef = ref(db, "users/" + window.currentUser.username);
-    const snap = await get(userRef);
-    if (!snap.exists()) return;
-    const data = snap.val();
-    const rData = rankCredit[data.rank];
-    if (!rData) return;
-
-    let newCredits = (data.credits || 0) + 1; // 1 credit per interval
-    await update(userRef, { credits: newCredits });
-    window.currentUser.credits = newCredits;
-
-    // Promote if eligible
-    if (rData.nextRank && newCredits >= rData.nextRank.credits){
-        await update(userRef, { rank: rData.nextRank.rank });
-        window.currentUser.rank = rData.nextRank.rank;
-        alert(`Congratulations! You are now ${rData.nextRank.rank}`);
-    }
-};
-
-// Check credits every 1 min
-setInterval(creditCheck, 60000);
-
-// -------------------- Auctions / Titles Shop --------------------
-window.startAuction = function(title, startingBid, duration){
-    if (!title || !startingBid || !duration) return;
-    alert(`Auction started for "${title}" with starting bid ${startingBid} for ${duration} min.`);
-    // Placeholder: implement Firebase auction push
-};
-
-window.openShop = function(){
-    alert("Opening title shop... (placeholder)");
-};
-
-// -------------------- Room Join/Leave --------------------
-window.joinRoom = async function(user){
-    const roomCode = new URLSearchParams(window.location.search).get("room");
-    if (!roomCode) return;
-    const membersRef = ref(db, `rooms/${roomCode}/members/${user.username}`);
-    await set(membersRef, {displayName: user.displayName, rank:user.rank});
-};
-
-window.leaveRoom = async function(user){
-    const roomCode = new URLSearchParams(window.location.search).get("room");
-    if (!roomCode) return;
-    const membersRef = ref(db, `rooms/${roomCode}/members/${user.username}`);
-    await set(membersRef, null);
-};
-
-// -------------------- Chat Messages --------------------
-window.sendMessage = async function(){
+// -------------------- Message Functions --------------------
+window.sendMessage = async function() {
     const input = document.getElementById("message-input");
     const msg = input.value.trim();
-    if (!msg) return;
+    if(!msg) return;
+
     const roomCode = new URLSearchParams(window.location.search).get("room");
     const messagesRef = ref(db, `messages/${roomCode}`);
-    await push(messagesRef, {
-        sender: window.currentUser.username,
-        message: msg,
-        timestamp: Date.now()
-    });
+    await push(messagesRef, {sender: window.currentUser.username, message: msg, timestamp:Date.now()});
     input.value="";
 };
 
-window.loadMessages = function(){
+// -------------------- Auction --------------------
+window.startAuction = async function(title, startBid, timeMinutes){
+    if(!title || !startBid || !timeMinutes) return;
     const roomCode = new URLSearchParams(window.location.search).get("room");
-    const messagesRef = ref(db, `messages/${roomCode}`);
-    const messagesDiv = document.getElementById("messages");
-    onValue(messagesRef, snapshot => {
-        messagesDiv.innerHTML="";
-        snapshot.forEach(child=>{
-            const m = child.val();
-            const msgDiv = document.createElement("div");
-            msgDiv.classList.add("message");
-            msgDiv.textContent = `[${m.sender}]: ${m.message}`;
-            messagesDiv.appendChild(msgDiv);
-        });
-    });
+    const auctionRef = ref(db, `auctions/${roomCode}`);
+    const endTime = Date.now() + parseInt(timeMinutes)*60*1000;
+    await set(auctionRef, {title, startBid:parseInt(startBid), highestBid:parseInt(startBid), highestBidder:"", endTime});
+    alert("Auction started.");
 };
+
+// -------------------- Shop --------------------
+window.openShop = async function() {
+    alert("Shop open placeholder (buy/sell titles functionality).");
+};
+
+// -------------------- Credits System --------------------
+const rankCredits = {
+    newbie: {gain:1, timeout:15*60*1000, rankUp:30},
+    member: {gain:1, timeout:30*60*1000, rankUp:0}, // placeholder
+    admin: {gain:1, timeout:2*60*60*1000, rankUp:0},
+    high: {gain:1, timeout:5*60*60*1000, rankUp:0},
+    core: {gain:1, timeout:0, rankUp:0},
+    pioneer: {gain:0, timeout:0, rankUp:0}
+};
+
+window.checkCredits = async function() {
+    const user = window.currentUser;
+    if(!user.rank) return;
+    const info = rankCredits[user.rank];
+    if(!info) return;
+    user.credits = (user.credits||0)+info.gain;
+    localStorage.setItem("currentUser", JSON.stringify(user));
+    const userRef = ref(db, "users/" + user.username + "/credits");
+    await set(userRef, user.credits);
+};
+setInterval(window.checkCredits, 60000); // every 1 min
+
