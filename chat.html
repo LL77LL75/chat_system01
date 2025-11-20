@@ -6,78 +6,127 @@
 
     <link rel="stylesheet" href="style.css">
 
+    <!-- Firebase -->
     <script type="module" src="firebase-config.js"></script>
-    <script type="module" src="chat.js"></script>
+
+    <!-- Global logic -->
     <script type="module" src="app.js"></script>
+
+    <!-- CHAT LOGIC (next file, obfuscated) -->
+    <script type="module" src="chat.js"></script>
+
+<style>
+    .msg{
+        padding:6px;border-bottom:1px solid #ddd;margin-bottom:4px;
+        position:relative;
+    }
+    .reactBox{
+        font-size:12px;margin-left:10px;color:#666;
+    }
+    .delBtn{
+        position:absolute;right:5px;top:5px;
+        font-size:10px;background:#e33;color:#fff;
+        border-radius:4px;padding:2px 5px;cursor:pointer;
+        display:none;
+    }
+    .msg:hover .delBtn{ display:inline-block; }
+
+    .sysJoin{
+        color:#777;font-style:italic;font-size:12px;margin:4px 0;
+    }
+    #reactPopup{
+        display:none;position:fixed;top:50%;left:50%;
+        transform:translate(-50%,-50%);
+        background:#fff;padding:15px;border-radius:10px;
+        box-shadow:0 0 20px #0006;
+    }
+    .rBtn{
+        padding:6px 10px;margin:4px;background:#2196F3;
+        color:#fff;border-radius:6px;cursor:pointer;display:inline-block;
+    }
+</style>
 </head>
+
 <body>
 
 <div class="chat-container">
 
-    <!-- Top Control Bar -->
-    <div class="chat-top-bar">
-        <button class="button-link" onclick="window.__ACC_POP()">Account</button>
-        <button class="button-link" onclick="window.__SHOP()">Shop</button>
-        <button class="button-link" onclick="window.__AUC()">Auctions</button>
-        <button class="button-link" onclick="window.__LV_RM()">Leave</button>
+    <!-- Top Bar -->
+    <div style="display:flex; gap:10px; margin-bottom:10px;">
+        <button class="button-link" onclick="window._accPop()">Account</button>
+        <button class="button-link" onclick="window._SHOP()">Shop</button>
+        <button class="button-link" onclick="window._AUC()">Auctions</button>
+        <button class="button-link" onclick="window._LEAVE()">Leave</button>
     </div>
 
-    <!-- Message Container -->
+    <h3 id="roomName"></h3>
+
+    <!-- Messages -->
     <div id="messages" class="message-list"></div>
 
-    <!-- Message Form -->
-    <form id="chat-form" onsubmit="event.preventDefault(); window.__S_MSG();">
-        <input id="msg-in" type="text" placeholder="Type your message..." required>
+    <!-- Input -->
+    <form id="chat-form" 
+          onsubmit="event.preventDefault(); window._SEND_MSG();">
+        <input id="msgInput" type="text" placeholder="Type message..." required>
         <button type="submit">Send</button>
     </form>
+</div>
 
+
+<!-- REACTION POPUP -->
+<div id="reactPopup">
+    <h4>Select Reaction</h4>
+    <div id="reactBtns"></div>
+    <button class="button-link" onclick="window._CLOSE_REACT()">Close</button>
 </div>
 
 
 <!-- ACCOUNT POPUP -->
-<div id="account-popup" class="popup-overlay" style="display:none;">
+<div id="accPOP" class="popup-overlay" style="display:none;">
     <div class="popup">
         <h3>Account Settings</h3>
 
-        <label>Display Name:</label>
-        <input id="acc-displayname" type="text">
+        <label>Display Name:</label><br>
+        <input id="aDisp" type="text"><br><br>
 
-        <label>Equipped Title:</label>
-        <select id="acc-title"></select>
+        <label>Password:</label><br>
+        <input id="aPass" type="password"><br><br>
 
-        <label>Password:</label>
-        <input id="acc-pass" type="password">
+        <label>Equipped Title:</label><br>
+        <select id="aTitle"></select><br><br>
 
-        <!-- Username change only for Core/Pioneer -->
-        <div id="acc-username-section" style="display:none;">
-            <label>Username:</label>
-            <input id="acc-username" type="text">
+        <!-- Username change allowed only for core+pioneer -->
+        <div id="aUBlock" style="display:none;">
+            <label>Username:</label><br>
+            <input id="aUser" type="text"><br><br>
         </div>
 
-        <button onclick="window.__SV_ACC()">Save</button>
-        <button onclick="window.__CL_ACC()">Close</button>
+        <button class="button-link" onclick="window._SAVE_ACC()">Save</button>
+        <button class="button-link" onclick="window._LOGOUT()">Logout</button>
+        <button class="button-link" onclick="window._CLOSE_ACC()">Close</button>
     </div>
 </div>
 
 
 <!-- SHOP POPUP -->
-<div id="shop-popup" class="popup-overlay" style="display:none;">
+<div id="shopPOP" class="popup-overlay" style="display:none;">
     <div class="popup">
         <h3>Titles Shop</h3>
-        <div id="shop-list"></div>
-        <button onclick="window.__CL_SHOP()">Close</button>
+        <div id="shopLIST"></div>
+        <button class="button-link" onclick="window._CLOSE_SHOP()">Close</button>
     </div>
 </div>
 
 
-<!-- AUCTIONS POPUP -->
-<div id="auction-popup" class="popup-overlay" style="display:none;">
+<!-- AUCTION POPUP -->
+<div id="aucPOP" class="popup-overlay" style="display:none;">
     <div class="popup">
         <h3>Auctions</h3>
-        <div id="auction-list"></div>
-        <button onclick="window.__CL_AUC()">Close</button>
+        <div id="aucLIST"></div>
+        <button class="button-link" onclick="window._CLOSE_AUC()">Close</button>
     </div>
 </div>
+
 
 </body>
 </html>
