@@ -1,6 +1,7 @@
-// firebase-config.js
+// Import Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+
 // Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCY5_krGDfHcp4ZmUe5RXo7BaKYUQwAM8E",
@@ -15,6 +16,4 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-// Export database for modules
-export const db = getDatabase(app);
-
+export const db = getDatabase(app);  // export db for app.js usage
