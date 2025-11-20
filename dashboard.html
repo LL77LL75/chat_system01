@@ -1,104 +1,177 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Chat App – Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Chat – Dashboard</title>
+<link rel="stylesheet" href="style.css">
 
-    <script type="module" src="firebase-config.js"></script>
-    <script type="module" src="dashboard.js"></script>
-    <script type="module" src="app.js"></script>
+<!-- Firebase + Core Logic -->
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="app.js"></script>
+
+<style>
+    .rmBtn{padding:8px;margin:5px;display:inline-block;background:#2196F3;color:#fff;
+        border-radius:6px;cursor:pointer;}
+    .selRoomPanel{padding:10px;background:#fff;border-radius:8px;min-height:120px;}
+    .accPopup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+        background:#fff;padding:20px;border-radius:10px;box-shadow:0 0 20px #0004;display:none;}
+    .accBtn{padding:6px 12px;background:#4CAF50;color:#fff;border-radius:6px;
+        margin:4px;cursor:pointer;display:inline-block;}
+</style>
 </head>
+
 <body>
+<div style="padding:20px;">
 
-<div class="dashboard-container">
+<h2>Dashboard</h2>
 
-    <!-- ACCOUNT PANEL -->
-    <div class="account-panel">
-        <h3>Account</h3>
+<!-- ACCOUNT BUTTON -->
+<button class="accBtn" onclick="window._accPop()">Account</button>
 
-        <button class="button-link" onclick="window.__ACC_POP()">Account Settings</button>
-        <button class="button-link" onclick="window.__LG0()">Logout</button>
+<!-- ADMIN CREATE ACCOUNT (core/pioneer only) -->
+<button id="mkACCBTN" class="accBtn" style="display:none;"
+onclick="mkAcc()">Create Account</button>
 
-        <!-- Core + Pioneer Create Account -->
-        <button id="create-acc-btn" class="button-link" style="display:none;"
-                onclick="window.__CR_ACC()">Create Account</button>
+<!-- ROOMS -->
+<h3>Rooms</h3>
+<div id="roomHolder"></div>
 
-        <!-- Titles Shop -->
-        <button class="button-link" onclick="window.__SHOP()">Titles Shop</button>
-
-        <!-- Auctions -->
-        <button class="button-link" onclick="window.__AUC()">Auctions</button>
-    </div>
-
-
-
-    <!-- ROOM LIST PANEL -->
-    <div class="room-panel">
-        <h3>Rooms</h3>
-        <div id="room-list" class="room-list"></div>
-    </div>
-
-
-
-    <!-- ROOM INFO PANEL (updated on room button click) -->
-    <div class="room-info-panel">
-        <h3>Room Info</h3>
-        <div id="room-info">Click a room to view details</div>
-
-        <button id="join-btn" class="button-link" style="display:none;"
-                onclick="window.__JN_RM()">Join Room</button>
-    </div>
+<!-- SELECTED ROOM INFO -->
+<h3>Room Info</h3>
+<div id="rmInfo" class="selRoomPanel">Select a room</div>
 
 </div>
-
 
 <!-- ACCOUNT POPUP -->
-<div id="account-popup" class="popup-overlay" style="display:none;">
-    <div class="popup">
-        <h3>Account Settings</h3>
+<div id="accPOP" class="accPopup">
+    <h3>Account Settings</h3>
 
-        <label>Display Name:</label>
-        <input id="acc-displayname" type="text">
+    <label>Display Name:</label><br>
+    <input id="aDisp" type="text" style="width:90%;"><br><br>
 
-        <label>Equipped Title:</label>
-        <select id="acc-title"></select>
+    <label>Password:</label><br>
+    <input id="aPass" type="password" style="width:90%;"><br><br>
 
-        <label>Password:</label>
-        <input id="acc-pass" type="password">
+    <label>Equipped Title:</label><br>
+    <select id="aTitle" style="width:95%;"></select><br><br>
 
-        <!-- Username change only for Core/Pioneer -->
-        <div id="acc-username-section" style="display:none;">
-            <label>Username:</label>
-            <input id="acc-username" type="text">
-        </div>
-
-        <button onclick="window.__SV_ACC()">Save</button>
-        <button onclick="window.__CL_ACC()">Close</button>
-    </div>
+    <button class="accBtn" onclick="_saveACC()">Save</button>
+    <button class="accBtn" onclick="doLogout()">Logout</button>
+    <button class="accBtn" onclick="window._closeAcc()">Close</button>
 </div>
 
+<script type="module">
+import "./app.js";
 
+const $=(x)=>document.getElementById(x);
 
-<!-- SHOP POPUP -->
-<div id="shop-popup" class="popup-overlay" style="display:none;">
-    <div class="popup">
-        <h3>Titles Shop</h3>
-        <div id="shop-list"></div>
-        <button onclick="window.__CL_SHOP()">Close</button>
-    </div>
-</div>
+/*===========================================
+    SHOW/HIDE ACCOUNT POPUP
+===========================================*/
+window._accPop=function(){
+    let p=$("accPOP");
+    let cu=window.CU;
+    $("aDisp").value=cu.disp||"";
+    $("aPass").value=cu.p||"";
+    let sel=$("aTitle");
+    sel.innerHTML="";
+    (cu.titles||[]).forEach(t=>{
+        let o=document.createElement("option");
+        o.value=t; o.innerText=t;
+        if(cu.et===t) o.selected=true;
+        sel.appendChild(o);
+    });
+    p.style.display="block";
+};
+window._closeAcc=function(){
+    $("accPOP").style.display="none";
+};
 
+/*===========================================
+    SAVE ACCOUNT SETTINGS
+    (title + display name + password)
+===========================================*/
+window._saveACC=async function(){
+    let d=$("aDisp").value.trim(),
+        pw=$("aPass").value.trim(),
+        et=$("aTitle").value;
 
-<!-- AUCTIONS POPUP -->
-<div id="auction-popup" class="popup-overlay" style="display:none;">
-    <div class="popup">
-        <h3>Auctions</h3>
-        <div id="auction-list"></div>
-        <button onclick="window.__CL_AUC()">Close</button>
-    </div>
-</div>
+    if(!d||!pw) return alert("Missing fields");
+
+    let u=window.CU.u;
+    let p="users/"+u;
+
+    await U(ref(db,p),{disp:d,p:pw,et:et});
+
+    window.CU.disp=d;
+    window.CU.p=pw;
+    window.CU.et=et;
+    localStorage.setItem("CU",JSON.stringify(window.CU));
+
+    alert("Updated");
+    window._closeAcc();
+};
+
+/*===========================================
+    SHOW CREATE ACCOUNT BUTTON (CORE/PIONEER)
+===========================================*/
+if(["core","pioneer"].includes(window.CU.rank)){
+    $("mkACCBTN").style.display="inline-block";
+}
+
+/*===========================================
+    LOAD ROOMS
+===========================================*/
+window.getRooms(async function(r){
+    let h=$("roomHolder");
+    h.innerHTML="";
+    r.forEach(x=>{
+        let b=document.createElement("div");
+        b.className="rmBtn";
+        b.innerText=x;
+        b.onclick=()=>_showRoomInfo(x);
+        h.appendChild(b);
+    });
+});
+
+/*===========================================
+    ROOM PANEL UPDATE
+===========================================*/
+async function _showRoomInfo(rc){
+    let box=$("rmInfo");
+    let s=await get(ref(db,"rooms/"+rc));
+    if(!s.exists()){
+        box.innerHTML="Room vanished.";
+        return;
+    }
+
+    // load active users
+    let mem=[];
+    let mSnap=await get(ref(db,"active/"+rc));
+    if(mSnap.exists()){
+        mSnap.forEach(c=>mem.push(c.key));
+    }
+
+    let info="<b>Room:</b> "+rc+"<br><b>Users:</b><br>";
+
+    let isAdmin=["admin","high","core","pioneer"].includes(window.CU.rank);
+
+    for(let u of mem){
+        let uSnap=await get(ref(db,"users/"+u));
+        if(!uSnap.exists()) continue;
+        let d=uSnap.val();
+
+        let tag=d.disp || u;
+        if(isAdmin){
+            if(d.muted) tag+=" (muted:"+d.muted+")";
+            if(d.banned) tag+=" (banned:"+d.banned+")";
+        }
+        info+= "• "+tag+"<br>";
+    }
+
+    box.innerHTML=info+"<br><button class='accBtn' onclick=\"location.href='chat.html?room="+rc+"'\">Join Room</button>";
+}
+</script>
 
 </body>
 </html>
-dashboard.js
