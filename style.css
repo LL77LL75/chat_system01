@@ -13,6 +13,7 @@ body { font-family: Arial; background:#f4f4f9; margin:0; padding:0; }
 .chat-container { width:70%; max-width:900px; margin:20px auto; background:#fff; padding:15px; border-radius:8px; box-shadow:0 0 10px #ccc; }
 .message-list { height:400px; overflow-y:auto; border:1px solid #ddd; padding:10px; margin-bottom:10px; border-radius:5px; background:#fafafa; }
 .message { padding:5px; margin-bottom:5px; border-bottom:1px solid #eee; }
+.reactions { margin-left:10px; color: #555; font-size:0.8em; }
 
 #chat-form input { width:80%; padding:8px; margin-right:5px; border-radius:5px; border:1px solid #ccc; }
 #chat-form button { padding:8px 16px; border-radius:5px; border:none; background:#4CAF50; color:#fff; cursor:pointer; }

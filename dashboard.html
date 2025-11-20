@@ -1,31 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Chat App – Dashboard</title>
-    <link rel="stylesheet" href="style.css">
-    <script type="module" src="firebase-config.js"></script>
-    <script type="module" src="app.js"></script>
+<meta charset="UTF-8">
+<title>Chat App – Dashboard</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="app.js"></script>
 </head>
 <body>
 <div class="dashboard-container">
-
-    <!-- Account Panel -->
     <div class="account-panel">
         <h3>Account</h3>
         <button onclick="openAccountPopup()">Account</button>
         <a href="index.html" class="button-link">Logout</a>
     </div>
 
-    <!-- Room List -->
     <div class="room-panel">
         <h3>Rooms</h3>
-        <div id="room-list">
-            <!-- Populated dynamically -->
-        </div>
+        <div id="room-list"></div>
     </div>
 
-    <!-- Account Popup -->
     <div id="account-popup" class="account-popup" style="display:none;">
         <h3>Account Settings</h3>
         <label>Display Name:</label>
@@ -41,7 +35,6 @@
 
         <button onclick="closeAccountPopup()">Close</button>
     </div>
-
 </div>
 </body>
 </html>
