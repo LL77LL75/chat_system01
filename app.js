@@ -1,10 +1,11 @@
 import { db } from './firebase-config.js';
-import { ref, set, get, push, onValue, update, remove } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
+import { ref, set, get, push, onValue, update } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
 
+// Global current user
 window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
 
 // ------------------------
-// Normal Login
+// Normal Login Function
 // ------------------------
 window.normalLogin = async function () {
     const username = document.getElementById("login-username").value.trim();
@@ -13,10 +14,16 @@ window.normalLogin = async function () {
     const userRef = ref(db, "users/" + username);
     const snap = await get(userRef);
 
-    if (!snap.exists()) { alert("User does not exist."); return; }
+    if (!snap.exists()) {
+        alert("User does not exist or not approved yet.");
+        return;
+    }
 
     const data = snap.val();
-    if (data.password !== password) { alert("Wrong password"); return; }
+    if (data.password !== password) {
+        alert("Wrong password");
+        return;
+    }
 
     window.currentUser = { username, ...data };
     localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
@@ -24,24 +31,73 @@ window.normalLogin = async function () {
 };
 
 // ------------------------
-// Rooms
+// Account Popup
 // ------------------------
-window.createRoom = async function(roomCode) {
+window.openAccountPopup = function() {
+    const displayName = prompt("Change Display Name (current: " + (window.currentUser.displayName || "") + ")");
+    if(displayName) {
+        window.currentUser.displayName = displayName;
+        localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+        alert("Display name updated!");
+    }
+};
+
+// ------------------------
+// Create Room
+// ------------------------
+window.createRoom = async function (roomCode) {
     if (!roomCode) return;
     const roomRef = ref(db, "rooms/" + roomCode);
     const snap = await get(roomRef);
-    if (snap.exists()) { alert("Room exists"); return; }
-    await set(roomRef, { createdBy: window.currentUser.username, members: [] });
-};
-
-window.deleteRoom = async function(roomCode) {
-    if (!roomCode) return;
-    const roomRef = ref(db, "rooms/" + roomCode);
-    await remove(roomRef);
+    if (snap.exists()) {
+        alert("Room already exists. Redirecting...");
+        return;
+    }
+    await set(roomRef, { createdBy: window.currentUser.username });
+    alert("Room created.");
 };
 
 // ------------------------
-// Chat
+// Delete Room
+// ------------------------
+window.deleteRoom = async function (roomCode) {
+    if (!roomCode) return;
+    const roomRef = ref(db, "rooms/" + roomCode);
+    const snap = await get(roomRef);
+    if (!snap.exists()) {
+        alert("Room does not exist.");
+        return;
+    }
+    await set(roomRef, null);
+    alert("Room deleted.");
+};
+
+// ------------------------
+// Load Rooms List
+// ------------------------
+window.loadRooms = async function() {
+    const roomsRef = ref(db, "rooms");
+    const snap = await get(roomsRef);
+    const container = document.getElementById("room-list");
+    container.innerHTML = ""; // clear previous
+
+    if (!snap.exists()) return;
+
+    snap.forEach(roomSnap => {
+        const roomCode = roomSnap.key;
+        const btn = document.createElement("button");
+        btn.textContent = roomCode;
+        btn.style.marginRight = "5px";
+        btn.onclick = () => {
+            alert("Room: " + roomCode);
+            // TODO: Show members panel
+        };
+        container.appendChild(btn);
+    });
+};
+
+// ------------------------
+// Send Chat Message
 // ------------------------
 window.sendMessage = async function () {
     const input = document.getElementById("message-input");
@@ -49,68 +105,59 @@ window.sendMessage = async function () {
     if (!message) return;
 
     const roomCode = new URLSearchParams(window.location.search).get("room");
-    if (!roomCode) return;
-
     const messagesRef = ref(db, `messages/${roomCode}`);
-    await push(messagesRef, { sender: window.currentUser.username, message, timestamp: Date.now() });
+    await push(messagesRef, {
+        sender: window.currentUser.username,
+        message: message,
+        timestamp: Date.now()
+    });
     input.value = "";
 };
 
-window.loadMessages = function() {
+// ------------------------
+// Load Messages
+// ------------------------
+window.loadMessages = function () {
     const roomCode = new URLSearchParams(window.location.search).get("room");
-    if (!roomCode) return;
     const messagesRef = ref(db, `messages/${roomCode}`);
-    onValue(messagesRef, snapshot => {
-        const container = document.getElementById("messages");
-        container.innerHTML = "";
-        snapshot.forEach(child => {
+
+    onValue(messagesRef, (snapshot) => {
+        const messagesContainer = document.getElementById("messages");
+        if (!messagesContainer) return; // Safety check
+        messagesContainer.innerHTML = "";
+        snapshot.forEach((child) => {
             const msg = child.val();
-            const div = document.createElement("div");
-            div.textContent = `[${msg.sender}] ${msg.message}`;
-            container.appendChild(div);
+            const msgDiv = document.createElement("div");
+            msgDiv.classList.add("message");
+            msgDiv.textContent = `[${msg.sender}]: ${msg.message}`;
+            messagesContainer.appendChild(msgDiv);
         });
     });
 };
 
-window.leaveRoom = function() { window.location.href = "dashboard.html"; };
-
 // ------------------------
-// Auction
+// Leave Room
 // ------------------------
-window.startAuction = async function(title, startingBid, durationMinutes) {
-    const maxDurations = { newbie: 5, member: 15, admin: 15, high: 15, core: 15, pioneer: 15 };
-    const maxDuration = maxDurations[window.currentUser.rank] || 15;
-    if (durationMinutes > maxDuration) { alert(`Max auction time: ${maxDuration} min`); return; }
-
-    const auctionRef = push(ref(db, "auctions"));
-    await set(auctionRef, {
-        title,
-        startingBid: Number(startingBid),
-        duration: durationMinutes,
-        createdBy: window.currentUser.username,
-        highestBid: Number(startingBid),
-        highestBidder: null,
-        timestamp: Date.now()
-    });
-    alert("Auction started!");
-};
-
-window.placeBid = async function(auctionId, bidAmount) {
-    const auctionRef = ref(db, "auctions/" + auctionId);
-    const snap = await get(auctionRef);
-    const auction = snap.val();
-    if (bidAmount <= auction.highestBid) { alert("Bid too low"); return; }
-    await update(auctionRef, { highestBid: Number(bidAmount), highestBidder: window.currentUser.username });
+window.leaveRoom = function () {
+    window.location.href = "dashboard.html";
 };
 
 // ------------------------
-// Account Management
+// Logout
 // ------------------------
-window.createUserAccount = async function() {
-    if (!["core","pioneer"].includes(window.currentUser.rank)) { alert("No permission"); return; }
-    const username = prompt("New username:");
-    const password = prompt("Password:");
-    if (!username || !password) return;
-    await set(ref(db, "users/" + username), { password, rank: "newbie", displayName: username });
-    alert("User created!");
+window.logout = function () {
+    localStorage.removeItem("currentUser");
+    window.location.href = "index.html";
 };
+
+// ------------------------
+// Initialize pages
+// ------------------------
+window.addEventListener("DOMContentLoaded", () => {
+    if (window.location.pathname.includes("dashboard.html")) {
+        loadRooms();
+    }
+    if (window.location.pathname.includes("chat.html")) {
+        loadMessages();
+    }
+});
