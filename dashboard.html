@@ -14,24 +14,63 @@
     <!-- Account Panel -->
     <div class="account-panel">
         <h3>Account</h3>
-        <a href="index.html" class="button-link">Logout</a>
         <button onclick="openAccountPopup()">Account</button>
+        <button onclick="logout()">Logout</button>
+
+        <!-- Core/Pioneer Create Accounts -->
+        <div id="create-account-container">
+            <button id="create-account-btn" onclick="createNewAccount()">Create Account (Core/Pioneer)</button>
+        </div>
     </div>
 
     <!-- Room List -->
     <div class="room-panel">
         <h3>Rooms</h3>
-        <div id="room-list"></div>
-        <button onclick="createRoom(prompt('Enter room code'))">Create Room</button>
-        <button onclick="deleteRoom(prompt('Enter room code'))">Delete Room</button>
+        <div id="room-list">
+            <!-- Buttons for rooms will appear here -->
+        </div>
     </div>
 
-    <!-- Admin Account Creation (Core/Pioneer) -->
+    <!-- Admin Panel -->
     <div class="admin-panel">
-        <h3>Create User Account</h3>
-        <button onclick="createUserAccount()">Create Account</button>
+        <h3>Admin Panel</h3>
+        <button onclick="promptCreateRoom()">Create Room</button>
+        <button onclick="promptDeleteRoom()">Delete Room</button>
+
+        <div id="room-info-panel">
+            <h4>Room Info</h4>
+            <ul id="room-members"></ul>
+        </div>
     </div>
 
 </div>
+
+<script>
+function promptCreateRoom() {
+    const code = prompt("Enter room code:");
+    if (code) window.createRoom(code);
+}
+
+function promptDeleteRoom() {
+    const code = prompt("Enter room code:");
+    if (code) window.deleteRoom(code);
+}
+
+// Function for Core/Pioneer to create new users
+window.createNewAccount = async function() {
+    const username = prompt("Enter username:");
+    const password = prompt("Enter password:");
+    const displayName = prompt("Enter display name:");
+    if (!username || !password || !displayName) return;
+
+    const userRef = firebase.database().ref("users/" + username);
+    const snap = await get(userRef);
+    if (snap.exists()) { alert("User already exists!"); return; }
+
+    await set(userRef, { password, displayName, rank: "newbie", credits: 0 });
+    alert("Account created!");
+};
+</script>
+
 </body>
 </html>
