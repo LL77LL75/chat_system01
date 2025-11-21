@@ -16,59 +16,63 @@
         <h3>Account</h3>
         <button onclick="openAccountPopup()">Account</button>
         <button onclick="logout()">Logout</button>
-
-        <!-- Core/Pioneer Create Accounts -->
         <div id="create-account-container">
-            <button id="create-account-btn" onclick="createNewAccount()">Create Account (Core/Pioneer)</button>
+            <button onclick="createNewAccount()">Create Account (Core/Pioneer)</button>
         </div>
     </div>
 
-    <!-- Room List -->
+    <!-- Rooms -->
     <div class="room-panel">
         <h3>Rooms</h3>
-        <div id="room-list">
-            <!-- Buttons for rooms will appear here -->
-        </div>
-    </div>
-
-    <!-- Admin Panel -->
-    <div class="admin-panel">
-        <h3>Admin Panel</h3>
-        <button onclick="promptCreateRoom()">Create Room</button>
-        <button onclick="promptDeleteRoom()">Delete Room</button>
-
+        <div id="room-list"></div>
         <div id="room-info-panel">
-            <h4>Room Info</h4>
             <ul id="room-members"></ul>
+            <button id="join-room-btn" onclick="joinRoom()">Join Room</button>
         </div>
     </div>
 
 </div>
 
 <script>
-function promptCreateRoom() {
-    const code = prompt("Enter room code:");
-    if (code) window.createRoom(code);
+// Load rooms dynamically
+async function loadRooms() {
+    const roomsRef = firebase.database().ref("rooms");
+    const snap = await get(roomsRef);
+    const list = document.getElementById("room-list");
+    if (!list) return;
+    list.innerHTML = "";
+    if (snap.exists()) {
+        Object.keys(snap.val()).forEach(room => {
+            const btn = document.createElement("button");
+            btn.textContent = room;
+            btn.style.marginRight = "5px";
+            btn.onclick = () => { loadRoomInfo(room); };
+            list.appendChild(btn);
+        });
+    }
+}
+loadRooms();
+
+// Load room members
+async function loadRoomInfo(room) {
+    const roomRef = firebase.database().ref("rooms/" + room + "/members");
+    const snap = await get(roomRef);
+    const membersList = document.getElementById("room-members");
+    if (!membersList) return;
+    membersList.innerHTML = "";
+    if (snap.exists()) {
+        Object.keys(snap.val()).forEach(m => {
+            const li = document.createElement("li");
+            li.textContent = m;
+            membersList.appendChild(li);
+        });
+    }
 }
 
-function promptDeleteRoom() {
-    const code = prompt("Enter room code:");
-    if (code) window.deleteRoom(code);
-}
-
-// Function for Core/Pioneer to create new users
-window.createNewAccount = async function() {
-    const username = prompt("Enter username:");
-    const password = prompt("Enter password:");
-    const displayName = prompt("Enter display name:");
-    if (!username || !password || !displayName) return;
-
-    const userRef = firebase.database().ref("users/" + username);
-    const snap = await get(userRef);
-    if (snap.exists()) { alert("User already exists!"); return; }
-
-    await set(userRef, { password, displayName, rank: "newbie", credits: 0 });
-    alert("Account created!");
+// Join room
+window.joinRoom = function() {
+    const room = document.getElementById("room-members").previousSibling.textContent;
+    window.location.href = `chat.html?room=${room}`;
 };
 </script>
 
