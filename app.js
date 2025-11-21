@@ -185,4 +185,4 @@ setInterval(async () => {
     const snap = await get(uRef);
 
     await update(uRef, { credits: (snap.val().credits || 0) + 1 });
-}, 60000);
+}, 120000);
