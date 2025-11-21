@@ -1,27 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>Login</title>
-<link rel="stylesheet" href="style.css">
-<script type="module" src="firebase-config.js"></script>
-<script type="module" src="app.js"></script>
+    <meta charset="UTF-8">
+    <title>Chat App – Login</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="app.js"></script>
 </head>
 <body>
+    <div class="login-container">
+        <h2>Login</h2>
+        <form id="login-form" onsubmit="event.preventDefault(); normalLogin();">
+            <label for="login-username">Username</label>
+            <input id="login-username" type="text" placeholder="Enter username" required>
 
-<div class="login-container">
-    <h2>Login</h2>
+            <label for="login-password">Password</label>
+            <input id="login-password" type="password" placeholder="Enter password" required>
 
-    <form id="login-form" onsubmit="event.preventDefault(); normalLogin();">
-        <label>Username</label>
-        <input id="login-username" type="text" required>
-
-        <label>Password</label>
-        <input id="login-password" type="password" required>
-
-        <button type="submit" class="button-link">Login</button>
-    </form>
-</div>
-
+            <!-- LOGIN REDIRECT BUTTON -->
+            <button type="submit" class="btn">Login</button>
+        </form>
+    </div>
 </body>
 </html>
