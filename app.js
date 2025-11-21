@@ -5,7 +5,7 @@ import { ref, set, get, push, onValue, update } from 'https://www.gstatic.com/fi
 window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
 
 // ------------------------
-// Normal Login Function
+// Normal Login
 // ------------------------
 window.normalLogin = async function () {
     const username = document.getElementById("login-username").value.trim();
@@ -31,19 +31,7 @@ window.normalLogin = async function () {
 };
 
 // ------------------------
-// Account Popup
-// ------------------------
-window.openAccountPopup = function() {
-    const displayName = prompt("Change Display Name (current: " + (window.currentUser.displayName || "") + ")");
-    if(displayName) {
-        window.currentUser.displayName = displayName;
-        localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-        alert("Display name updated!");
-    }
-};
-
-// ------------------------
-// Create Room
+// Room Functions
 // ------------------------
 window.createRoom = async function (roomCode) {
     if (!roomCode) return;
@@ -53,51 +41,19 @@ window.createRoom = async function (roomCode) {
         alert("Room already exists. Redirecting...");
         return;
     }
-    await set(roomRef, { createdBy: window.currentUser.username });
+    await set(roomRef, { createdBy: window.currentUser.username, members: {} });
     alert("Room created.");
 };
 
-// ------------------------
-// Delete Room
-// ------------------------
 window.deleteRoom = async function (roomCode) {
     if (!roomCode) return;
     const roomRef = ref(db, "rooms/" + roomCode);
-    const snap = await get(roomRef);
-    if (!snap.exists()) {
-        alert("Room does not exist.");
-        return;
-    }
     await set(roomRef, null);
     alert("Room deleted.");
 };
 
 // ------------------------
-// Load Rooms List
-// ------------------------
-window.loadRooms = async function() {
-    const roomsRef = ref(db, "rooms");
-    const snap = await get(roomsRef);
-    const container = document.getElementById("room-list");
-    container.innerHTML = ""; // clear previous
-
-    if (!snap.exists()) return;
-
-    snap.forEach(roomSnap => {
-        const roomCode = roomSnap.key;
-        const btn = document.createElement("button");
-        btn.textContent = roomCode;
-        btn.style.marginRight = "5px";
-        btn.onclick = () => {
-            alert("Room: " + roomCode);
-            // TODO: Show members panel
-        };
-        container.appendChild(btn);
-    });
-};
-
-// ------------------------
-// Send Chat Message
+// Chat Messages
 // ------------------------
 window.sendMessage = async function () {
     const input = document.getElementById("message-input");
@@ -105,59 +61,114 @@ window.sendMessage = async function () {
     if (!message) return;
 
     const roomCode = new URLSearchParams(window.location.search).get("room");
+    if (!roomCode) return;
+
     const messagesRef = ref(db, `messages/${roomCode}`);
     await push(messagesRef, {
         sender: window.currentUser.username,
         message: message,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        reactions: {},
     });
     input.value = "";
 };
 
-// ------------------------
-// Load Messages
-// ------------------------
 window.loadMessages = function () {
     const roomCode = new URLSearchParams(window.location.search).get("room");
-    const messagesRef = ref(db, `messages/${roomCode}`);
+    if (!roomCode) return;
 
+    const messagesRef = ref(db, `messages/${roomCode}`);
+    const messagesContainer = document.getElementById("messages");
     onValue(messagesRef, (snapshot) => {
-        const messagesContainer = document.getElementById("messages");
-        if (!messagesContainer) return; // Safety check
         messagesContainer.innerHTML = "";
         snapshot.forEach((child) => {
             const msg = child.val();
             const msgDiv = document.createElement("div");
             msgDiv.classList.add("message");
-            msgDiv.textContent = `[${msg.sender}]: ${msg.message}`;
+            msgDiv.innerHTML = `<b>${msg.sender}</b>: ${msg.message}`;
+            
+            // reactions
+            const reactionsDiv = document.createElement("div");
+            reactionsDiv.classList.add("reactions");
+            for (let user in msg.reactions || {}) {
+                const r = document.createElement("span");
+                r.textContent = `${user}: ${msg.reactions[user]}`;
+                reactionsDiv.appendChild(r);
+            }
+            msgDiv.appendChild(reactionsDiv);
             messagesContainer.appendChild(msgDiv);
         });
     });
 };
 
 // ------------------------
-// Leave Room
+// Reactions
 // ------------------------
-window.leaveRoom = function () {
-    window.location.href = "dashboard.html";
+window.addReaction = async function(messageId, reaction) {
+    const roomCode = new URLSearchParams(window.location.search).get("room");
+    const reactionRef = ref(db, `messages/${roomCode}/${messageId}/reactions/${window.currentUser.username}`);
+    await set(reactionRef, reaction);
 };
 
 // ------------------------
-// Logout
+// Account and Logout
 // ------------------------
+window.openAccountPopup = function() {
+    const popup = document.getElementById("account-popup");
+    if (!popup) return;
+    popup.style.display = "block";
+};
+
+window.closeAccountPopup = function() {
+    const popup = document.getElementById("account-popup");
+    if (!popup) return;
+    popup.style.display = "none";
+};
+
 window.logout = function () {
     localStorage.removeItem("currentUser");
     window.location.href = "index.html";
 };
 
 // ------------------------
-// Initialize pages
+// Auctions
 // ------------------------
-window.addEventListener("DOMContentLoaded", () => {
-    if (window.location.pathname.includes("dashboard.html")) {
-        loadRooms();
+window.startAuction = async function(title, startBid, time) {
+    const auctionRef = ref(db, `auctions/${title}`);
+    await set(auctionRef, { title, startBid, currentBid: startBid, highestBidder: null, endTime: Date.now() + time*60000 });
+};
+
+// ------------------------
+// Credits System
+// ------------------------
+window.checkCredits = async function() {
+    const usersRef = ref(db, "users");
+    const snap = await get(usersRef);
+    if (!snap.exists()) return;
+    const users = snap.val();
+
+    const now = Date.now();
+    for (let uname in users) {
+        const user = users[uname];
+        if (!user.lastCredit) user.lastCredit = 0;
+        const elapsed = now - user.lastCredit;
+        let addCredit = 0;
+        if (user.rank === "newbie" && elapsed >= 60000) addCredit = 1;
+        else if (user.rank === "member" && elapsed >= 300000) addCredit = 1;
+        else if (user.rank === "admin" && elapsed >= 900000) addCredit = 1;
+        else if (user.rank === "high" && elapsed >= 1200000) addCredit = 1;
+        else if (user.rank === "core" && elapsed >= 2700000) addCredit = 1;
+
+        if (addCredit) {
+            user.credits = (user.credits || 0) + addCredit;
+            user.lastCredit = now;
+
+            // auto-rank promotion
+            if (user.rank === "newbie" && user.credits >= 30) user.rank = "member";
+            await set(ref(db, "users/" + uname), user);
+        }
     }
-    if (window.location.pathname.includes("chat.html")) {
-        loadMessages();
-    }
-});
+};
+
+// check credits every minute
+setInterval(window.checkCredits, 60000);
