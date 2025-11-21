@@ -8,33 +8,45 @@
 <script type="module" src="app.js"></script>
 </head>
 <body>
+
 <div class="dashboard-container">
+
+    <!-- ACCOUNT -->
     <div class="account-panel">
         <h3>Account</h3>
         <button onclick="openAccountPopup()">Account</button>
-        <a href="index.html" class="button-link">Logout</a>
+        <a href="index.html" class="button-link" onclick="logout()">Logout</a>
     </div>
 
+    <!-- ROOMS -->
     <div class="room-panel">
         <h3>Rooms</h3>
         <div id="room-list"></div>
     </div>
 
-    <div id="account-popup" class="account-popup" style="display:none;">
-        <h3>Account Settings</h3>
-        <label>Display Name:</label>
-        <input id="display-name-input" type="text">
-        <button onclick="changeDisplayName()">Change Display Name</button>
+    <!-- ACCOUNT POPUP -->
+    <div id="account-popup" class="account-popup">
+        <div class="popup-inner">
 
-        <label>Password:</label>
-        <input id="password-input" type="password">
-        <button onclick="changePassword()">Change Password</button>
+            <h2>Account Settings</h2>
 
-        <label>Title:</label>
-        <select id="title-select" onchange="changeTitle()"></select>
+            <label>Display Name:</label>
+            <input id="display-name-input" type="text">
+            <button onclick="changeDisplayName()">Change</button>
 
-        <button onclick="closeAccountPopup()">Close</button>
+            <label>Password:</label>
+            <input id="password-input" type="password">
+            <button onclick="changePassword()">Change</button>
+
+            <label>Equipped Title:</label>
+            <select id="title-select"></select>
+            <button onclick="changeTitle()">Equip Title</button>
+
+            <button class="close-btn" onclick="closeAccountPopup()">Close</button>
+        </div>
     </div>
+
 </div>
+
 </body>
 </html>
