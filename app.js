@@ -57,10 +57,12 @@ function loadRooms() {
     });
 }
 
-/* ROOM INFO PANEL */
 async function loadRoomInfo(code) {
     const box = document.getElementById("room-info");
+    const joinBox = document.getElementById("join-container");
+
     box.innerHTML = "Loading...";
+    joinBox.innerHTML = ""; // clear previous join button
 
     const usersSnap = await get(ref(db, "roomUsers/" + code));
     const bannedSnap = await get(ref(db, "banned/" + code));
@@ -75,16 +77,29 @@ async function loadRoomInfo(code) {
     if (["admin","high","core","pioneer"].includes(window.currentUser.rank)) {
         html += "<br><b>Banned:</b><br>";
         if (bannedSnap.exists()) {
-            Object.entries(bannedSnap.val()).forEach(([u,v]) => html += `• ${u} (L${v.level}, ${v.scope})<br>`);
+            Object.entries(bannedSnap.val()).forEach(([u,v]) =>
+                html += `• ${u} (L${v.level}, ${v.scope})<br>`
+            );
         } else html += "None<br>";
 
         html += "<br><b>Muted:</b><br>";
         if (mutedSnap.exists()) {
-            Object.entries(mutedSnap.val()).forEach(([u,v]) => html += `• ${u} (L${v.level}, ${v.scope})<br>`);
+            Object.entries(mutedSnap.val()).forEach(([u,v]) =>
+                html += `• ${u} (L${v.level}, ${v.scope})<br>`
+            );
         } else html += "None<br>";
     }
 
     box.innerHTML = html;
+
+    // NEW JOIN BUTTON
+    const joinBtn = document.createElement("button");
+    joinBtn.textContent = "Join Room";
+    joinBtn.style.marginTop = "10px";
+    joinBtn.onclick = () => {
+        location.href = `chat.html?room=${code}`;
+    };
+    joinBox.appendChild(joinBtn);
 }
 
 /* CREATE ROOM */
@@ -186,4 +201,3 @@ setInterval(async () => {
 
     await update(uRef, { credits: (snap.val().credits || 0) + 1 });
 }, 120000);
-loadRoomInfo
