@@ -6,15 +6,22 @@
 <link rel="stylesheet" href="style.css">
 <script type="module" src="firebase-config.js"></script>
 <script type="module" src="app.js"></script>
+<script type="module" src="chat.js"></script>
 </head>
 <body>
+
 <div class="chat-container">
+
     <div id="messages" class="message-list"></div>
+
     <form id="chat-form" onsubmit="event.preventDefault(); sendMessage();">
-        <input id="message-input" type="text" placeholder="Enter message" required>
+        <input id="message-input" type="text" placeholder="Message..." required>
         <button type="submit">Send</button>
     </form>
-    <a href="dashboard.html" class="button-link">Leave Chat</a>
+
+    <a class="button-link" href="dashboard.html" onclick="leaveChat()">Leave Chat</a>
+
 </div>
+
 </body>
 </html>
