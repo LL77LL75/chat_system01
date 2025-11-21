@@ -1,62 +1,68 @@
-import { db } from "./firebase-config.js";
-import {
-    ref, set, get, update, push, remove, onValue
-} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { db } from './firebase-config.js';
+import { ref, set, get, push, onValue, update } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
 
+// GLOBAL current user
 window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
 
-const IS_DASH = location.pathname.includes("dashboard.html");
-const IS_CHAT = location.pathname.includes("chat.html");
-const IS_INDEX = location.pathname.includes("index.html");
-
-/* LOGIN */
-window.normalLogin = async function () {
-    const u = document.getElementById("login-username").value.trim();
-    const p = document.getElementById("login-password").value.trim();
-
-    const userRef = ref(db, "users/" + u);
-    const snap = await get(userRef);
-
-    if (!snap.exists()) return alert("No such user");
-    if (snap.val().password !== p) return alert("Wrong password");
-
-    window.currentUser = snap.val();
-    localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-
-    location.href = "dashboard.html";
-};
-
-/* DASHBOARD LOAD */
+// ------------------------
+// Core/Pioneer Create Account Button
+// ------------------------
 window.addEventListener("load", () => {
-    if (!IS_DASH) return;
-
-    loadRooms();
-
-    const createBtn = document.getElementById("create-account-btn");
     if (["core", "pioneer"].includes(window.currentUser.rank)) {
-        createBtn.style.display = "inline-block";
+        const container = document.getElementById("create-account-btn-container");
+        const btn = document.createElement("button");
+        btn.textContent = "Create Account";
+        btn.onclick = async () => {
+            const username = prompt("Enter username:");
+            const password = prompt("Enter password:");
+            if (!username || !password) return alert("Invalid username or password.");
+            const userRef = ref(db, "users/" + username);
+            const snap = await get(userRef);
+            if (snap.exists()) return alert("Username already exists!");
+            await set(userRef, {
+                password,
+                rank: "newbie",
+                displayName: username,
+                titles: ["newbie", "newcomer"],
+                credits: 0
+            });
+            alert("Account created!");
+        };
+        container.appendChild(btn);
     }
 });
 
-/* LOAD ROOMS */
-function loadRooms() {
-    if (!IS_DASH) return;
+// ------------------------
+// Load all rooms and create buttons
+// ------------------------
+let selectedRoomCode = null;
 
-    const list = document.getElementById("room-list");
-    onValue(ref(db, "rooms"), snap => {
-        list.innerHTML = "";
+window.loadRoomButtons = async function () {
+    const roomListDiv = document.getElementById("room-list");
+    roomListDiv.innerHTML = "";
 
-        snap.forEach(child => {
-            const code = child.key;
-            const btn = document.createElement("button");
-            btn.className = "room-btn";
-            btn.textContent = code;
-            btn.onclick = () => loadRoomInfo(code);
-            list.appendChild(btn);
-        });
+    const roomsSnap = await get(ref(db, "rooms"));
+    if (!roomsSnap.exists()) {
+        roomListDiv.innerHTML = "No active rooms";
+        return;
+    }
+
+    Object.keys(roomsSnap.val()).forEach(code => {
+        const btn = document.createElement("button");
+        btn.textContent = code;
+        btn.style.margin = "5px";
+        btn.onclick = () => selectRoom(code);
+        roomListDiv.appendChild(btn);
     });
+};
+
+// Select a room
+function selectRoom(code) {
+    selectedRoomCode = code;
+    loadRoomInfo(code);
 }
 
+// Load room info and admin panel
 window.loadRoomInfo = async function (code) {
     const box = document.getElementById("room-info");
     const joinBox = document.getElementById("join-container");
@@ -77,9 +83,7 @@ window.loadRoomInfo = async function (code) {
         Object.keys(usersSnap.val()).forEach(user => {
             html += `• ${user}<br>`;
         });
-    } else {
-        html += "None<br>";
-    }
+    } else html += "None<br>";
 
     // Admin-only panels
     if (["admin","high","core","pioneer"].includes(window.currentUser.rank)) {
@@ -97,122 +101,56 @@ window.loadRoomInfo = async function (code) {
             });
         } else html += "None<br>";
 
-        // ADMIN CREATE/DELETE AREA
+        // Admin create/delete buttons
         adminActions.innerHTML =
-            `<button onclick="createRoom('${code}')">Start Room</button>
+            `<button onclick="createRoom(prompt('Enter new room code'))">Start Room</button>
              <button onclick="deleteRoom('${code}')">Close Room</button>`;
     }
 
     box.innerHTML = html;
 
-    // FINAL PART: THE JOIN BUTTON YOU WANTED
+    // Add the JOIN button
     const joinBtn = document.createElement("button");
     joinBtn.textContent = "Join Room";
     joinBtn.style.padding = "8px 16px";
     joinBtn.style.marginTop = "10px";
     joinBtn.onclick = () => {
-        window.location.href = `chat.html?room=${code}`;
+        if (!selectedRoomCode) return alert("No room selected!");
+        window.location.href = `chat.html?room=${selectedRoomCode}`;
     };
-
     joinBox.appendChild(joinBtn);
 };
 
-/* CREATE ROOM */
-window.createRoomClick = async () => {
-    const code = document.getElementById("room-code-input").value.trim();
-    if (!code) return alert("Enter a room code");
-
-    await set(ref(db, "rooms/" + code), {
-        createdBy: window.currentUser.username,
-        created: Date.now()
-    });
-
-    alert("Room created!");
+// ------------------------
+// Room management (admin)
+window.createRoom = async function (roomCode) {
+    if (!roomCode) return;
+    const roomRef = ref(db, "rooms/" + roomCode);
+    const snap = await get(roomRef);
+    if (snap.exists()) {
+        alert("Room already exists. Redirecting...");
+        window.location.href = `chat.html?room=${roomCode}`;
+        return;
+    }
+    await set(roomRef, { createdBy: window.currentUser.username });
+    alert("Room created.");
+    loadRoomButtons();
 };
 
-/* DELETE ROOM */
-window.deleteRoomClick = async () => {
-    const code = document.getElementById("room-code-delete").value.trim();
-    if (!code) return alert("Enter room code");
-
-    await remove(ref(db, "rooms/" + code));
-    alert("Room deleted!");
+window.deleteRoom = async function (roomCode) {
+    if (!roomCode) return;
+    const roomRef = ref(db, "rooms/" + roomCode);
+    const snap = await get(roomRef);
+    if (!snap.exists()) {
+        alert("Room does not exist.");
+        return;
+    }
+    await set(roomRef, null);
+    alert("Room deleted.");
+    loadRoomButtons();
 };
 
-/* ACCOUNT POPUP */
-window.openAccountPopup = () => document.getElementById("account-popup").style.display = "flex";
-window.closeAccountPopup = () => document.getElementById("account-popup").style.display = "none";
-
-/* CHANGE DISPLAY NAME */
-window.changeDisplayName = async () => {
-    const d = document.getElementById("display-name-input").value.trim();
-    if (!d) return;
-
-    window.currentUser.displayName = d;
-    localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-    await update(ref(db, "users/" + window.currentUser.username), { displayName: d });
-
-    alert("Updated!");
-};
-
-/* CHANGE PASSWORD */
-window.changePassword = async () => {
-    const p = document.getElementById("password-input").value.trim();
-    if (!p) return;
-
-    window.currentUser.password = p;
-    localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-    await update(ref(db, "users/" + window.currentUser.username), { password: p });
-
-    alert("Password updated");
-};
-
-/* CHANGE TITLE */
-window.changeTitle = async () => {
-    const t = document.getElementById("title-select").value;
-    window.currentUser.equippedTitle = t;
-    localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-    await update(ref(db, "users/" + window.currentUser.username), { equippedTitle: t });
-
-    alert("Equipped!");
-};
-
-/* CREATE ACCOUNT POPUP */
-window.openCreateAccountPopup = () => document.getElementById("create-account-popup").style.display = "flex";
-window.closeCreateAccountPopup = () => document.getElementById("create-account-popup").style.display = "none";
-
-/* CREATE NEW ACCOUNT */
-window.createAccount = async () => {
-    const u = document.getElementById("new-username").value.trim();
-    const p = document.getElementById("new-password").value.trim();
-    const r = document.getElementById("new-rank").value;
-
-    if (!u || !p) return alert("Missing fields");
-
-    const userRef = ref(db, "users/" + u);
-    const snap = await get(userRef);
-    if (snap.exists()) return alert("User already exists");
-
-    await set(userRef, {
-        username: u,
-        password: p,
-        rank: r,
-        displayName: u,
-        credits: 0,
-        titles: [],
-        equippedTitle: ""
-    });
-
-    alert("Account created!");
-    closeCreateAccountPopup();
-};
-
-/* GIVE CREDITS EVERY 1 MIN */
-setInterval(async () => {
-    if (!window.currentUser.username) return;
-
-    const uRef = ref(db, "users/" + window.currentUser.username);
-    const snap = await get(uRef);
-
-    await update(uRef, { credits: (snap.val().credits || 0) + 1 });
-}, 120000);
+// Call this once on page load
+window.addEventListener("load", () => {
+    loadRoomButtons();
+});
