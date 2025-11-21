@@ -1,79 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Chat App – Dashboard</title>
-    <link rel="stylesheet" href="style.css">
-    <script type="module" src="firebase-config.js"></script>
-    <script type="module" src="app.js"></script>
+  <meta charset="UTF-8">
+  <title>Chat App – Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="firebase-config.js"></script>
+  <script type="module" src="app.js"></script>
 </head>
 <body>
 
 <div class="dashboard-container">
 
-    <!-- Account Panel -->
-    <div class="account-panel">
-        <h3>Account</h3>
-        <button onclick="openAccountPopup()">Account</button>
-        <button onclick="logout()">Logout</button>
-        <div id="create-account-container">
-            <button onclick="createNewAccount()">Create Account (Core/Pioneer)</button>
-        </div>
-    </div>
+  <!-- Account Panel -->
+  <div class="account-panel">
+      <h3>Account</h3>
+      <button onclick="openAccountPopup()">Account</button>
+      <button onclick="logout()">Logout</button>
+      <div id="create-account-container">
+          <button onclick="createNewAccount()">Create Account (Core/Pioneer)</button>
+      </div>
+  </div>
 
-    <!-- Rooms -->
-    <div class="room-panel">
-        <h3>Rooms</h3>
-        <div id="room-list"></div>
-        <div id="room-info-panel">
-            <ul id="room-members"></ul>
-            <button id="join-room-btn" onclick="joinRoom()">Join Room</button>
-        </div>
-    </div>
+  <!-- Rooms Panel -->
+  <div class="room-panel">
+      <h3>Rooms</h3>
+      <div id="room-list"></div>
+      <div id="room-info-panel" style="margin-top:10px;">
+          <h4>Room Members</h4>
+          <ul id="room-members"></ul>
+          <button id="join-room-btn" onclick="joinRoom()">Join Room</button>
+      </div>
+  </div>
 
 </div>
 
-<script>
-// Load rooms dynamically
+<script type="module">
+import { db } from './firebase-config.js';
+import { ref, get, onValue, set, update } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
+
+// Load rooms
 async function loadRooms() {
-    const roomsRef = firebase.database().ref("rooms");
+    const roomsRef = ref(db, 'rooms');
     const snap = await get(roomsRef);
     const list = document.getElementById("room-list");
-    if (!list) return;
     list.innerHTML = "";
     if (snap.exists()) {
-        Object.keys(snap.val()).forEach(room => {
+        Object.keys(snap.val()).forEach(roomCode => {
             const btn = document.createElement("button");
-            btn.textContent = room;
+            btn.textContent = roomCode;
             btn.style.marginRight = "5px";
-            btn.onclick = () => { loadRoomInfo(room); };
+            btn.onclick = () => loadRoomInfo(roomCode);
             list.appendChild(btn);
         });
     }
 }
-loadRooms();
 
 // Load room members
-async function loadRoomInfo(room) {
-    const roomRef = firebase.database().ref("rooms/" + room + "/members");
-    const snap = await get(roomRef);
+async function loadRoomInfo(roomCode) {
+    const membersRef = ref(db, `rooms/${roomCode}/members`);
+    const snap = await get(membersRef);
     const membersList = document.getElementById("room-members");
-    if (!membersList) return;
     membersList.innerHTML = "";
     if (snap.exists()) {
-        Object.keys(snap.val()).forEach(m => {
+        Object.keys(snap.val()).forEach(username => {
             const li = document.createElement("li");
-            li.textContent = m;
+            li.textContent = username;
             membersList.appendChild(li);
         });
     }
+    // Save selected room
+    window.selectedRoom = roomCode;
 }
 
-// Join room
+// Join selected room
 window.joinRoom = function() {
-    const room = document.getElementById("room-members").previousSibling.textContent;
-    window.location.href = `chat.html?room=${room}`;
+    if (!window.selectedRoom) {
+        alert("Select a room first!");
+        return;
+    }
+    window.location.href = `chat.html?room=${window.selectedRoom}`;
 };
+
+// Core/Pioneer create account
+window.createNewAccount = async function() {
+    const username = prompt("Enter new username:");
+    if (!username) return;
+    const password = prompt("Enter password:");
+    if (!password) return;
+    const displayName = prompt("Enter display name:");
+    if (!displayName) return;
+
+    const userRef = ref(db, `users/${username}`);
+    const snap = await get(userRef);
+    if (snap.exists()) {
+        alert("Username already exists!");
+        return;
+    }
+
+    // Only Core/Pioneer can create accounts
+    if (!["core","pioneer"].includes(window.currentUser.rank)) {
+        alert("You are not authorized to create accounts.");
+        return;
+    }
+
+    await set(userRef, {
+        password: password,
+        rank: "newbie",
+        displayName: displayName,
+        credits: 0,
+        titles: ["newbie", "newcomer"],
+        lastCredit: Date.now()
+    });
+
+    alert("Account created successfully!");
+};
+
+// Initialize dashboard
+window.addEventListener("load", () => {
+    loadRooms();
+});
 </script>
 
 </body>
