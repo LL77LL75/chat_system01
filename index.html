@@ -8,15 +8,20 @@
 <script type="module" src="app.js"></script>
 </head>
 <body>
+
 <div class="login-container">
     <h2>Login</h2>
+
     <form id="login-form" onsubmit="event.preventDefault(); normalLogin();">
         <label>Username</label>
         <input id="login-username" type="text" required>
+
         <label>Password</label>
         <input id="login-password" type="password" required>
-        <a href="dashboard.html" class="btn">Login</a>
+
+        <button type="submit" class="button-link">Login</button>
     </form>
 </div>
+
 </body>
 </html>
