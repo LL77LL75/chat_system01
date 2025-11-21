@@ -10,68 +10,21 @@
 <body>
 
 <div class="chat-container">
-
-    <!-- Chat Messages -->
     <div id="messages" class="message-list"></div>
 
-    <!-- Message Input -->
     <form id="chat-form" onsubmit="event.preventDefault(); sendMessage();">
-        <label for="message-input">Type your message:</label>
         <input id="message-input" type="text" placeholder="Enter message" required>
         <button type="submit">Send</button>
     </form>
 
-    <!-- Leave Chat -->
     <button onclick="leaveRoom()">Leave Chat</button>
-
-    <!-- Admin Panel -->
-    <div class="admin-panel">
-        <h3>Admin Panel</h3>
-        <button onclick="promptCreateRoom()">Create Room</button>
-        <button onclick="promptDeleteRoom()">Delete Room</button>
-
-        <div id="room-info-panel">
-            <h4>Room Info</h4>
-            <ul id="room-members"></ul>
-        </div>
-    </div>
 
 </div>
 
 <script>
-function promptCreateRoom() {
-    const code = prompt("Enter room code:");
-    if (code) window.createRoom(code);
-}
-
-function promptDeleteRoom() {
-    const code = prompt("Enter room code:");
-    if (code) window.deleteRoom(code);
-}
-
-// Optional: update room members panel
-async function loadRoomMembers() {
-    const roomCode = new URLSearchParams(window.location.search).get("room");
-    if (!roomCode) return;
-    const roomRef = firebase.database().ref("rooms/" + roomCode);
-    const snap = await get(roomRef);
-    const membersList = document.getElementById("room-members");
-    if (!membersList) return;
-    membersList.innerHTML = "";
-    if (snap.exists()) {
-        const data = snap.val();
-        if (data.members) {
-            Object.keys(data.members).forEach(m => {
-                const li = document.createElement("li");
-                li.textContent = m;
-                membersList.appendChild(li);
-            });
-        }
-    }
-}
-
-// Refresh members list every 5 seconds
-setInterval(loadRoomMembers, 5000);
+window.addEventListener("load", () => {
+    loadMessages();
+});
 </script>
 
 </body>
