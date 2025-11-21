@@ -57,50 +57,65 @@ function loadRooms() {
     });
 }
 
-async function loadRoomInfo(code) {
+window.loadRoomInfo = async function (code) {
     const box = document.getElementById("room-info");
     const joinBox = document.getElementById("join-container");
+    const adminActions = document.getElementById("admin-room-actions");
 
     box.innerHTML = "Loading...";
-    joinBox.innerHTML = ""; // clear previous join button
+    joinBox.innerHTML = "";
+    adminActions.innerHTML = "";
 
+    // Load users
     const usersSnap = await get(ref(db, "roomUsers/" + code));
     const bannedSnap = await get(ref(db, "banned/" + code));
     const mutedSnap = await get(ref(db, "muted/" + code));
 
-    let html = `<h3>${code}</h3><b>Users:</b><br>`;
+    let html = `<b>Room: ${code}</b><br><br><b>Users:</b><br>`;
 
     if (usersSnap.exists()) {
-        Object.keys(usersSnap.val()).forEach(u => html += "• " + u + "<br>");
-    } else html += "None<br>";
+        Object.keys(usersSnap.val()).forEach(user => {
+            html += `• ${user}<br>`;
+        });
+    } else {
+        html += "None<br>";
+    }
 
+    // Admin-only panels
     if (["admin","high","core","pioneer"].includes(window.currentUser.rank)) {
-        html += "<br><b>Banned:</b><br>";
+        html += "<br><b>Banned Users:</b><br>";
         if (bannedSnap.exists()) {
-            Object.entries(bannedSnap.val()).forEach(([u,v]) =>
-                html += `• ${u} (L${v.level}, ${v.scope})<br>`
-            );
+            Object.entries(bannedSnap.val()).forEach(([u,v]) => {
+                html += `• ${u} (L${v.level}, ${v.scope})<br>`;
+            });
         } else html += "None<br>";
 
-        html += "<br><b>Muted:</b><br>";
+        html += "<br><b>Muted Users:</b><br>";
         if (mutedSnap.exists()) {
-            Object.entries(mutedSnap.val()).forEach(([u,v]) =>
-                html += `• ${u} (L${v.level}, ${v.scope})<br>`
-            );
+            Object.entries(mutedSnap.val()).forEach(([u,v]) => {
+                html += `• ${u} (L${v.level}, ${v.scope})<br>`;
+            });
         } else html += "None<br>";
+
+        // ADMIN CREATE/DELETE AREA
+        adminActions.innerHTML =
+            `<button onclick="createRoom('${code}')">Start Room</button>
+             <button onclick="deleteRoom('${code}')">Close Room</button>`;
     }
 
     box.innerHTML = html;
 
-    // NEW JOIN BUTTON
+    // FINAL PART: THE JOIN BUTTON YOU WANTED
     const joinBtn = document.createElement("button");
     joinBtn.textContent = "Join Room";
+    joinBtn.style.padding = "8px 16px";
     joinBtn.style.marginTop = "10px";
     joinBtn.onclick = () => {
-        location.href = `chat.html?room=${code}`;
+        window.location.href = `chat.html?room=${code}`;
     };
+
     joinBox.appendChild(joinBtn);
-}
+};
 
 /* CREATE ROOM */
 window.createRoomClick = async () => {
