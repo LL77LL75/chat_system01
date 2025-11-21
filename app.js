@@ -5,12 +5,11 @@ import {
 
 window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
 
-/* PAGE CHECKERS */
-const IS_LOGIN = location.pathname.includes("index.html");
 const IS_DASH = location.pathname.includes("dashboard.html");
-const IS_CHAT  = location.pathname.includes("chat.html");
+const IS_CHAT = location.pathname.includes("chat.html");
+const IS_INDEX = location.pathname.includes("index.html");
 
-/* ---------------- LOGIN ---------------- */
+/* LOGIN */
 window.normalLogin = async function () {
     const u = document.getElementById("login-username").value.trim();
     const p = document.getElementById("login-password").value.trim();
@@ -19,225 +18,171 @@ window.normalLogin = async function () {
     const snap = await get(userRef);
 
     if (!snap.exists()) return alert("No such user");
-    const d = snap.val();
+    if (snap.val().password !== p) return alert("Wrong password");
 
-    if (d.password !== p) return alert("Wrong password");
-
-    window.currentUser = { username: u, ...d };
+    window.currentUser = snap.val();
     localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
 
-    window.location.href = "dashboard.html";
+    location.href = "dashboard.html";
 };
 
-/* ---------------- DASHBOARD LOAD ---------------- */
+/* DASHBOARD LOAD */
 window.addEventListener("load", () => {
-    if (!IS_DASH) return; // FIX #1
+    if (!IS_DASH) return;
 
     loadRooms();
 
     const createBtn = document.getElementById("create-account-btn");
-    if (createBtn && ["core","pioneer"].includes(window.currentUser.rank)) {
-        createBtn.style.display = "block";
+    if (["core", "pioneer"].includes(window.currentUser.rank)) {
+        createBtn.style.display = "inline-block";
     }
 });
 
-/* ---------------- LOAD ROOMS ---------------- */
+/* LOAD ROOMS */
 function loadRooms() {
-    if (!IS_DASH) return; // FIX #2
+    if (!IS_DASH) return;
 
-    const rList = document.getElementById("room-list");
-    const rInfo = document.getElementById("room-info");
-    if (!rList) return;
+    const list = document.getElementById("room-list");
+    onValue(ref(db, "rooms"), snap => {
+        list.innerHTML = "";
 
-    onValue(ref(db, "rooms"), (snap) => {
-        rList.innerHTML = "";
-        snap.forEach((child) => {
+        snap.forEach(child => {
             const code = child.key;
-
             const btn = document.createElement("button");
+            btn.className = "room-btn";
             btn.textContent = code;
             btn.onclick = () => loadRoomInfo(code);
-
-            rList.appendChild(btn);
+            list.appendChild(btn);
         });
     });
 }
 
-/* ---------------- ROOM INFO PANEL ---------------- */
+/* ROOM INFO PANEL */
 async function loadRoomInfo(code) {
-    if (!IS_DASH) return;
-    const roomInfo = document.getElementById("room-info");
-    if (!roomInfo) return; // FIX #3
+    const box = document.getElementById("room-info");
+    box.innerHTML = "Loading...";
 
-    const usersRef = ref(db, "roomUsers/" + code);
-    const bannedRef = ref(db, "banned/" + code);
-    const mutedRef = ref(db, "muted/" + code);
+    const usersSnap = await get(ref(db, "roomUsers/" + code));
+    const bannedSnap = await get(ref(db, "banned/" + code));
+    const mutedSnap = await get(ref(db, "muted/" + code));
 
-    const [uSnap, bSnap, mSnap] = await Promise.all([
-        get(usersRef), get(bannedRef), get(mutedRef)
-    ]);
+    let html = `<h3>${code}</h3><b>Users:</b><br>`;
 
-    let html = `<h3>Room: ${code}</h3><b>Users:</b><br>`;
-
-    if (uSnap.exists()) {
-        Object.keys(uSnap.val()).forEach(u => {
-            html += `• ${u}<br>`;
-        });
-    } else html += "No users<br>";
+    if (usersSnap.exists()) {
+        Object.keys(usersSnap.val()).forEach(u => html += "• " + u + "<br>");
+    } else html += "None<br>";
 
     if (["admin","high","core","pioneer"].includes(window.currentUser.rank)) {
-        html += `<br><b>Banned:</b><br>`;
-        if (bSnap.exists()) {
-            Object.entries(bSnap.val()).forEach(([u,v])=>{
-                html+=`• ${u} (L${v.level}, ${v.scope})<br>`;
-            });
-        } else html+="None<br>";
+        html += "<br><b>Banned:</b><br>";
+        if (bannedSnap.exists()) {
+            Object.entries(bannedSnap.val()).forEach(([u,v]) => html += `• ${u} (L${v.level}, ${v.scope})<br>`);
+        } else html += "None<br>";
 
-        html += `<br><b>Muted:</b><br>`;
-        if (mSnap.exists()) {
-            Object.entries(mSnap.val()).forEach(([u,v])=>{
-                html+=`• ${u} (L${v.level}, ${v.scope})<br>`;
-            });
-        } else html+="None<br>";
+        html += "<br><b>Muted:</b><br>";
+        if (mutedSnap.exists()) {
+            Object.entries(mutedSnap.val()).forEach(([u,v]) => html += `• ${u} (L${v.level}, ${v.scope})<br>`);
+        } else html += "None<br>";
     }
 
-    roomInfo.innerHTML = html;
+    box.innerHTML = html;
 }
 
-/* ---------------- CREATE & DELETE ROOMS ---------------- */
-window.createRoomClick = async function () {
-    if (!IS_DASH) return;
+/* CREATE ROOM */
+window.createRoomClick = async () => {
     const code = document.getElementById("room-code-input").value.trim();
-    if (!code) return;
+    if (!code) return alert("Enter a room code");
 
     await set(ref(db, "rooms/" + code), {
         createdBy: window.currentUser.username,
         created: Date.now()
     });
-    alert("Room created");
+
+    alert("Room created!");
 };
 
-window.deleteRoomClick = async function () {
-    if (!IS_DASH) return;
+/* DELETE ROOM */
+window.deleteRoomClick = async () => {
     const code = document.getElementById("room-code-delete").value.trim();
-    if (!code) return;
+    if (!code) return alert("Enter room code");
 
     await remove(ref(db, "rooms/" + code));
-    alert("Room deleted");
+    alert("Room deleted!");
 };
 
-/* ---------------- ACCOUNT POPUP ---------------- */
-window.openAccountPopup = function () {
-    if (!IS_DASH) return;
-    const p = document.getElementById("account-popup");
-    if (!p) return;
-    p.style.display = "flex";
+/* ACCOUNT POPUP */
+window.openAccountPopup = () => document.getElementById("account-popup").style.display = "flex";
+window.closeAccountPopup = () => document.getElementById("account-popup").style.display = "none";
 
-    document.getElementById("display-name-input").value = window.currentUser.displayName;
-
-    const sel = document.getElementById("title-select");
-    if (!sel) return;
-
-    sel.innerHTML = "";
-    (window.currentUser.titles || []).forEach(t => {
-        const o = document.createElement("option");
-        o.value = t; o.textContent = t;
-        if (t === window.currentUser.equippedTitle) o.selected = true;
-        sel.appendChild(o);
-    });
-};
-
-window.closeAccountPopup = function () {
-    const p = document.getElementById("account-popup");
-    if (p) p.style.display = "none";
-};
-
-window.changeDisplayName = async function () {
-    if (!IS_DASH) return;
+/* CHANGE DISPLAY NAME */
+window.changeDisplayName = async () => {
     const d = document.getElementById("display-name-input").value.trim();
     if (!d) return;
 
     window.currentUser.displayName = d;
     localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+    await update(ref(db, "users/" + window.currentUser.username), { displayName: d });
 
-    await update(ref(db, "users/" + window.currentUser.username), {
-        displayName: d
-    });
+    alert("Updated!");
 };
 
-window.changePassword = async function () {
-    if (!IS_DASH) return;
+/* CHANGE PASSWORD */
+window.changePassword = async () => {
     const p = document.getElementById("password-input").value.trim();
     if (!p) return;
 
     window.currentUser.password = p;
     localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+    await update(ref(db, "users/" + window.currentUser.username), { password: p });
 
-    await update(ref(db, "users/" + window.currentUser.username), {
-        password: p
-    });
+    alert("Password updated");
 };
 
-window.changeTitle = async function () {
-    if (!IS_DASH) return;
-
+/* CHANGE TITLE */
+window.changeTitle = async () => {
     const t = document.getElementById("title-select").value;
-
     window.currentUser.equippedTitle = t;
     localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+    await update(ref(db, "users/" + window.currentUser.username), { equippedTitle: t });
 
-    await update(ref(db, "users/" + window.currentUser.username), {
-        equippedTitle: t
-    });
+    alert("Equipped!");
 };
 
-/* ---------------- CREATE ACCOUNT ---------------- */
-window.openCreateAccountPopup = function () {
-    if (!IS_DASH) return;
-    const p = document.getElementById("create-account-popup");
-    if (p) p.style.display = "flex";
-};
+/* CREATE ACCOUNT POPUP */
+window.openCreateAccountPopup = () => document.getElementById("create-account-popup").style.display = "flex";
+window.closeCreateAccountPopup = () => document.getElementById("create-account-popup").style.display = "none";
 
-window.closeCreateAccountPopup = function () {
-    const p = document.getElementById("create-account-popup");
-    if (p) p.style.display = "none";
-};
-
-window.createAccount = async function () {
-    if (!IS_DASH) return;
-
+/* CREATE NEW ACCOUNT */
+window.createAccount = async () => {
     const u = document.getElementById("new-username").value.trim();
     const p = document.getElementById("new-password").value.trim();
     const r = document.getElementById("new-rank").value;
 
     if (!u || !p) return alert("Missing fields");
 
-    const refU = ref(db, "users/" + u);
-    const snap = await get(refU);
-    if (snap.exists()) return alert("User exists");
+    const userRef = ref(db, "users/" + u);
+    const snap = await get(userRef);
+    if (snap.exists()) return alert("User already exists");
 
-    await set(refU, {
+    await set(userRef, {
         username: u,
         password: p,
-        displayName: u,
         rank: r,
+        displayName: u,
         credits: 0,
         titles: [],
         equippedTitle: ""
     });
 
-    alert("Account created");
+    alert("Account created!");
     closeCreateAccountPopup();
 };
 
-/* ---------------- CREDITS EVERY 1 MIN ---------------- */
+/* GIVE CREDITS EVERY 1 MIN */
 setInterval(async () => {
     if (!window.currentUser.username) return;
 
     const uRef = ref(db, "users/" + window.currentUser.username);
-    const s = await get(uRef);
-    if (!s.exists()) return;
+    const snap = await get(uRef);
 
-    await update(uRef, { credits: (s.val().credits || 0) + 1 });
-
+    await update(uRef, { credits: (snap.val().credits || 0) + 1 });
 }, 60000);
