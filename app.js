@@ -5,6 +5,11 @@ import {
 
 window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
 
+/* PAGE CHECKERS */
+const IS_LOGIN = location.pathname.includes("index.html");
+const IS_DASH = location.pathname.includes("dashboard.html");
+const IS_CHAT  = location.pathname.includes("chat.html");
+
 /* ---------------- LOGIN ---------------- */
 window.normalLogin = async function () {
     const u = document.getElementById("login-username").value.trim();
@@ -26,19 +31,23 @@ window.normalLogin = async function () {
 
 /* ---------------- DASHBOARD LOAD ---------------- */
 window.addEventListener("load", () => {
-    if (!location.pathname.includes("dashboard.html")) return;
+    if (!IS_DASH) return; // FIX #1
 
     loadRooms();
 
-    if (["core", "pioneer"].includes(window.currentUser.rank)) {
-        document.getElementById("create-account-btn").style.display = "block";
+    const createBtn = document.getElementById("create-account-btn");
+    if (createBtn && ["core","pioneer"].includes(window.currentUser.rank)) {
+        createBtn.style.display = "block";
     }
 });
 
 /* ---------------- LOAD ROOMS ---------------- */
 function loadRooms() {
+    if (!IS_DASH) return; // FIX #2
+
     const rList = document.getElementById("room-list");
     const rInfo = document.getElementById("room-info");
+    if (!rList) return;
 
     onValue(ref(db, "rooms"), (snap) => {
         rList.innerHTML = "";
@@ -56,7 +65,9 @@ function loadRooms() {
 
 /* ---------------- ROOM INFO PANEL ---------------- */
 async function loadRoomInfo(code) {
+    if (!IS_DASH) return;
     const roomInfo = document.getElementById("room-info");
+    if (!roomInfo) return; // FIX #3
 
     const usersRef = ref(db, "roomUsers/" + code);
     const bannedRef = ref(db, "banned/" + code);
@@ -95,6 +106,7 @@ async function loadRoomInfo(code) {
 
 /* ---------------- CREATE & DELETE ROOMS ---------------- */
 window.createRoomClick = async function () {
+    if (!IS_DASH) return;
     const code = document.getElementById("room-code-input").value.trim();
     if (!code) return;
 
@@ -106,6 +118,7 @@ window.createRoomClick = async function () {
 };
 
 window.deleteRoomClick = async function () {
+    if (!IS_DASH) return;
     const code = document.getElementById("room-code-delete").value.trim();
     if (!code) return;
 
@@ -115,10 +128,16 @@ window.deleteRoomClick = async function () {
 
 /* ---------------- ACCOUNT POPUP ---------------- */
 window.openAccountPopup = function () {
-    document.getElementById("account-popup").style.display = "flex";
+    if (!IS_DASH) return;
+    const p = document.getElementById("account-popup");
+    if (!p) return;
+    p.style.display = "flex";
+
     document.getElementById("display-name-input").value = window.currentUser.displayName;
 
     const sel = document.getElementById("title-select");
+    if (!sel) return;
+
     sel.innerHTML = "";
     (window.currentUser.titles || []).forEach(t => {
         const o = document.createElement("option");
@@ -129,11 +148,12 @@ window.openAccountPopup = function () {
 };
 
 window.closeAccountPopup = function () {
-    document.getElementById("account-popup").style.display = "none";
+    const p = document.getElementById("account-popup");
+    if (p) p.style.display = "none";
 };
 
-/* ---------------- CHANGE ACCOUNT INFO ---------------- */
 window.changeDisplayName = async function () {
+    if (!IS_DASH) return;
     const d = document.getElementById("display-name-input").value.trim();
     if (!d) return;
 
@@ -146,6 +166,7 @@ window.changeDisplayName = async function () {
 };
 
 window.changePassword = async function () {
+    if (!IS_DASH) return;
     const p = document.getElementById("password-input").value.trim();
     if (!p) return;
 
@@ -158,6 +179,8 @@ window.changePassword = async function () {
 };
 
 window.changeTitle = async function () {
+    if (!IS_DASH) return;
+
     const t = document.getElementById("title-select").value;
 
     window.currentUser.equippedTitle = t;
@@ -168,16 +191,21 @@ window.changeTitle = async function () {
     });
 };
 
-/* ---------------- CREATE ACCOUNT (Core + Pioneer only) ---------------- */
+/* ---------------- CREATE ACCOUNT ---------------- */
 window.openCreateAccountPopup = function () {
-    document.getElementById("create-account-popup").style.display = "flex";
+    if (!IS_DASH) return;
+    const p = document.getElementById("create-account-popup");
+    if (p) p.style.display = "flex";
 };
 
 window.closeCreateAccountPopup = function () {
-    document.getElementById("create-account-popup").style.display = "none";
+    const p = document.getElementById("create-account-popup");
+    if (p) p.style.display = "none";
 };
 
 window.createAccount = async function () {
+    if (!IS_DASH) return;
+
     const u = document.getElementById("new-username").value.trim();
     const p = document.getElementById("new-password").value.trim();
     const r = document.getElementById("new-rank").value;
@@ -210,9 +238,6 @@ setInterval(async () => {
     const s = await get(uRef);
     if (!s.exists()) return;
 
-    const d = s.val();
-
-    const amount = 1; // simplified
-    await update(uRef, { credits: (d.credits || 0) + amount });
+    await update(uRef, { credits: (s.val().credits || 0) + 1 });
 
 }, 60000);
