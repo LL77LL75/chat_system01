@@ -1,167 +1,212 @@
-import { db } from './firebase-config.js';
-import { ref, set, get, push, onValue, update, remove } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
+import { db } from "./firebase-config.js";
+import {
+    ref, set, get, push, onValue, update, remove
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
 window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
 
-// ------------------------
-// Login
-// ------------------------
+/* ---------------- LOGIN ---------------- */
 window.normalLogin = async function () {
-    const username = document.getElementById("login-username").value.trim();
-    const password = document.getElementById("login-password").value.trim();
+    const u = document.getElementById("login-username").value.trim();
+    const p = document.getElementById("login-password").value.trim();
 
-    const userRef = ref(db, "users/" + username);
+    const userRef = ref(db, "users/" + u);
     const snap = await get(userRef);
 
-    if (!snap.exists()) { alert("User does not exist."); return; }
+    if (!snap.exists()) return alert("User does not exist.");
     const data = snap.val();
-    if (data.password !== password) { alert("Wrong password"); return; }
 
-    window.currentUser = { username, ...data };
+    if (data.password !== p) return alert("Wrong password");
+
+    window.currentUser = { username: u, ...data };
     localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+
     window.location.href = "dashboard.html";
 };
 
-// ------------------------
-// Room Management
-// ------------------------
-window.createRoom = async function(roomCode) {
-    if (!roomCode) return;
-    const roomRef = ref(db, "rooms/" + roomCode);
-    const snap = await get(roomRef);
-    if (snap.exists()) { alert("Room exists"); return; }
-    await set(roomRef, { createdBy: window.currentUser.username, members: [] });
-    alert("Room created.");
+/* ---------------- LOAD ROOMS ---------------- */
+window.addEventListener("load", async () => {
+    if (!window.location.pathname.includes("dashboard.html")) return;
+
+    const list = document.getElementById("room-list");
+    const roomsRef = ref(db, "rooms");
+
+    onValue(roomsRef, (snap) => {
+        list.innerHTML = "";
+        snap.forEach((child) => {
+            const r = child.key;
+            const btn = document.createElement("button");
+            btn.className = "room-btn";
+            btn.textContent = r;
+            btn.onclick = () => {
+                window.location.href = "chat.html?room=" + r;
+            };
+            list.appendChild(btn);
+        });
+    });
+});
+
+/* ---------------- CREATE ROOM ---------------- */
+window.createRoom = async function (code) {
+    if (!code) return;
+    const refR = ref(db, "rooms/" + code);
+    const s = await get(refR);
+    if (s.exists()) return alert("Room already exists.");
+
+    await set(refR, { createdBy: window.currentUser.username, created: Date.now() });
 };
 
-window.deleteRoom = async function(roomCode) {
-    if (!roomCode) return;
-    const roomRef = ref(db, "rooms/" + roomCode);
-    const snap = await get(roomRef);
-    if (!snap.exists()) { alert("Room does not exist"); return; }
-    await remove(roomRef);
-    alert("Room deleted.");
+/* ---------------- DELETE ROOM ---------------- */
+window.deleteRoom = async function (code) {
+    if (!code) return;
+    const refR = ref(db, "rooms/" + code);
+    await remove(refR);
 };
 
-// ------------------------
-// Chat
-// ------------------------
-window.sendMessage = async function() {
-    const input = document.getElementById("message-input");
-    const msg = input.value.trim();
+/* ---------------- CHAT MESSAGES ---------------- */
+window.sendMessage = async function () {
+    const t = document.getElementById("message-input");
+    const msg = t.value.trim();
     if (!msg) return;
 
-    const roomCode = new URLSearchParams(window.location.search).get("room");
-    const msgRef = ref(db, `messages/${roomCode}`);
+    const room = new URLSearchParams(window.location.search).get("room");
+    const msgRef = ref(db, "messages/" + room);
+
     await push(msgRef, {
         sender: window.currentUser.username,
         displayName: window.currentUser.displayName || window.currentUser.username,
         message: msg,
-        timestamp: Date.now(),
-        reactions: {}
+        reactions: {},
+        timestamp: Date.now()
     });
-    input.value = "";
+
+    t.value = "";
 };
 
-window.loadMessages = function() {
-    const roomCode = new URLSearchParams(window.location.search).get("room");
-    const msgRef = ref(db, `messages/${roomCode}`);
-    const messagesContainer = document.getElementById("messages");
+/* ---------------- LOAD MESSAGES ---------------- */
+window.loadMessages = function () {
+    const room = new URLSearchParams(window.location.search).get("room");
+    const msgRef = ref(db, "messages/" + room);
+    const box = document.getElementById("messages");
 
-    onValue(msgRef, (snapshot) => {
-        messagesContainer.innerHTML = "";
-        snapshot.forEach((child) => {
+    onValue(msgRef, (snap) => {
+        box.innerHTML = "";
+        snap.forEach((child) => {
             const m = child.val();
-            const div = document.createElement("div");
-            div.classList.add("message");
-            div.innerHTML = `<b>${m.displayName}:</b> ${m.message} <small>[${new Date(m.timestamp).toLocaleTimeString()}]</small>`;
+            const d = document.createElement("div");
+            d.className = "message";
+
+            d.innerHTML =
+                `<b>${m.displayName}</b>: ${m.message}
+                 <small>${new Date(m.timestamp).toLocaleTimeString()}</small>`;
 
             if (m.reactions) {
-                const rdiv = document.createElement("div");
-                rdiv.classList.add("reactions");
-                rdiv.style.fontSize = "0.8em";
-                for (const [user, reaction] of Object.entries(m.reactions)) {
-                    const sp = document.createElement("span");
-                    sp.textContent = `${user}: ${reaction} `;
-                    rdiv.appendChild(sp);
+                const rDiv = document.createElement("div");
+                rDiv.className = "reaction-box";
+                for (const [u, r] of Object.entries(m.reactions)) {
+                    const s = document.createElement("span");
+                    s.textContent = `${u}: ${r}`;
+                    rDiv.appendChild(s);
                 }
-                div.appendChild(rdiv);
+                d.appendChild(rDiv);
             }
 
-            div.addEventListener("click", async () => {
-                if (window.currentUser.rank === "member" || ["admin","high","core","pioneer"].includes(window.currentUser.rank)) {
-                    const reaction = prompt("Enter reaction:");
-                    if (!reaction) return;
-                    m.reactions = m.reactions || {};
-                    m.reactions[window.currentUser.username] = reaction;
-                    await update(ref(db, `messages/${roomCode}/${child.key}`), { reactions: m.reactions });
-                }
-            });
+            d.onclick = async () => {
+                const r = prompt("Enter reaction:");
+                if (!r) return;
+                m.reactions = m.reactions || {};
+                m.reactions[window.currentUser.username] = r;
 
-            messagesContainer.appendChild(div);
+                await update(ref(db, `messages/${room}/${child.key}`), {
+                    reactions: m.reactions
+                });
+            };
+
+            box.appendChild(d);
         });
     });
 };
 
-// ------------------------
-// Account Popup
-// ------------------------
-window.openAccountPopup = function() {
-    document.getElementById("account-popup").style.display = "block";
-    const select = document.getElementById("title-select");
-    select.innerHTML = "";
-    const titles = window.currentUser.titles || [];
-    titles.forEach(t => {
-        const opt = document.createElement("option");
-        opt.value = t; opt.textContent = t;
-        if (t === window.currentUser.equippedTitle) opt.selected = true;
-        select.appendChild(opt);
-    });
+/* ---------------- ACCOUNT POPUP ---------------- */
+window.openAccountPopup = function () {
+    const p = document.getElementById("account-popup");
+    p.style.display = "flex";
+
     document.getElementById("display-name-input").value = window.currentUser.displayName || "";
+
+    const sel = document.getElementById("title-select");
+    sel.innerHTML = "";
+    (window.currentUser.titles || []).forEach(t => {
+        const o = document.createElement("option");
+        o.value = t;
+        o.textContent = t;
+        if (t === window.currentUser.equippedTitle) o.selected = true;
+        sel.appendChild(o);
+    });
 };
-window.closeAccountPopup = function() { document.getElementById("account-popup").style.display = "none"; };
-window.changeDisplayName = async function() {
-    const name = document.getElementById("display-name-input").value.trim();
-    if (!name) return alert("Cannot be empty");
-    window.currentUser.displayName = name;
+
+window.closeAccountPopup = function () {
+    document.getElementById("account-popup").style.display = "none";
+};
+
+window.changeDisplayName = async function () {
+    const n = document.getElementById("display-name-input").value.trim();
+    if (!n) return alert("Cannot be empty");
+
+    window.currentUser.displayName = n;
     localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-    await update(ref(db, `users/${window.currentUser.username}`), { displayName: name });
+
+    await update(ref(db, "users/" + window.currentUser.username), {
+        displayName: n
+    });
 };
-window.changePassword = async function() {
-    const pass = document.getElementById("password-input").value.trim();
-    if (!pass) return alert("Cannot be empty");
-    window.currentUser.password = pass;
+
+window.changePassword = async function () {
+    const p = document.getElementById("password-input").value.trim();
+    if (!p) return alert("Cannot be empty");
+
+    window.currentUser.password = p;
     localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-    await update(ref(db, `users/${window.currentUser.username}`), { password: pass });
+
+    await update(ref(db, "users/" + window.currentUser.username), {
+        password: p
+    });
 };
-window.changeTitle = async function() {
+
+window.changeTitle = async function () {
     const t = document.getElementById("title-select").value;
+
     window.currentUser.equippedTitle = t;
     localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-    await update(ref(db, `users/${window.currentUser.username}`), { equippedTitle: t });
+
+    await update(ref(db, "users/" + window.currentUser.username), {
+        equippedTitle: t
+    });
 };
-window.logout = function() {
+
+window.logout = function () {
     localStorage.removeItem("currentUser");
-    window.location.href = "index.html";
 };
 
-// ------------------------
-// Credits System (check every 1 min)
-// ------------------------
+/* ---------------- CREDIT SYSTEM (every 1 min) ---------------- */
 setInterval(async () => {
-    const userRef = ref(db, `users/${window.currentUser.username}`);
-    const snap = await get(userRef);
-    if (!snap.exists()) return;
-    const user = snap.val();
-    const rank = user.rank;
-    let add = 0;
-    if (rank === "newbie") add = 1;
-    else if (rank === "member") add = 1;
-    else if (rank === "admin") add = 1;
-    else if (rank === "high") add = 1;
-    else if (rank === "core") add = 1;
-    else if (rank === "pioneer") add = 0;
+    if (!window.currentUser.username) return;
 
-    user.credits = (user.credits || 0) + add;
-    await update(userRef, { credits: user.credits });
+    const uRef = ref(db, "users/" + window.currentUser.username);
+    const s = await get(uRef);
+    if (!s.exists()) return;
+
+    const d = s.val();
+    const r = d.rank;
+
+    let amount = 0;
+    if (r === "newbie") amount = 1;
+    if (r === "member") amount = 1;
+    if (r === "admin") amount = 1;
+    if (r === "high") amount = 1;
+    if (r === "core") amount = 1;
+    if (r === "pioneer") amount = 0;
+
+    await update(uRef, { credits: (d.credits || 0) + amount });
+
 }, 60000);
