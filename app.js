@@ -35,3 +35,5 @@ export function loadMessages() {
 
 window.addEventListener("load", loadMessages);
 window.sendMessage = sendMessage;
+window.normalLogin = normalLogin;
+
