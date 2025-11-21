@@ -1,6 +1,8 @@
-body { font-family: Arial, sans-serif; background-color:#f4f4f9; margin:0; padding:0; }
-.button-link, button { display:inline-block; padding:8px 16px; margin:5px; background-color:#4CAF50; color:white; text-decoration:none; border-radius:5px; cursor:pointer; }
-.button-link:hover, button:hover { background-color:#45a049; }
-.login-container { width:300px; margin:100px auto; padding:30px; background:#fff; border-radius:8px; box-shadow:0 0 10px #ccc; }
-.dashboard-container, .chat-container { padding:20px; }
-.message-list { height:400px; overflow-y:auto; border:1px solid #ddd; padding:10px; background:#fafafa; border-radius:5px; }
+body { font-family: Arial; background: #f4f4f9; margin:0; padding:0; }
+button { padding:5px 10px; margin:2px; cursor:pointer; border-radius:5px; border:none; }
+.dashboard-container { display:flex; justify-content:space-around; padding:20px; }
+.account-panel, .room-panel { background:#fff; padding:15px; border-radius:8px; box-shadow:0 0 8px #ccc; width:300px; }
+.message-list { height:400px; overflow-y:auto; border:1px solid #ddd; padding:10px; margin-bottom:10px; background:#fafafa; }
+.chat-container { width:70%; max-width:900px; margin:20px auto; padding:15px; background:#fff; border-radius:8px; box-shadow:0 0 10px #ccc; }
+#chat-form input { width:80%; padding:8px; border-radius:5px; border:1px solid #ccc; margin-right:5px; }
+#chat-form button { padding:8px 16px; border-radius:5px; background:#4CAF50; color:white; cursor:pointer; }
