@@ -186,3 +186,4 @@ setInterval(async () => {
 
     await update(uRef, { credits: (snap.val().credits || 0) + 1 });
 }, 120000);
+loadRoomInfo()
