@@ -173,3 +173,4 @@ window.joinRoom = async function(){
 };
 
 window.loadRooms();
+normal
