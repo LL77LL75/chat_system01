@@ -201,12 +201,6 @@ setInterval(async () => {
 
     let amount = 0;
     if (r === "newbie") amount = 1;
-    if (r === "member") amount = 1;
-    if (r === "admin") amount = 1;
-    if (r === "high") amount = 1;
-    if (r === "core") amount = 1;
-    if (r === "pioneer") amount = 0;
-
     await update(uRef, { credits: (d.credits || 0) + amount });
 
 }, 60000);
