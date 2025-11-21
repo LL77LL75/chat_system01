@@ -8,59 +8,30 @@
     <script type="module" src="app.js"></script>
 </head>
 <body>
+
 <div class="dashboard-container">
 
     <!-- Account Panel -->
     <div class="account-panel">
         <h3>Account</h3>
         <a href="index.html" class="button-link">Logout</a>
-        <a href="#" onclick="openAccountPopup()">Account Settings</a>
+        <button onclick="openAccountPopup()">Account</button>
     </div>
 
-    <!-- Room List Panel -->
+    <!-- Room List -->
     <div class="room-panel">
         <h3>Rooms</h3>
-        <div id="room-list">
-            <!-- Room buttons populated dynamically -->
-        </div>
-        <div id="room-info">
-            <!-- Info of selected room -->
-        </div>
-    </div>
-
-    <!-- Admin Actions Panel -->
-    <div id="admin-room-actions" style="display:none;">
+        <div id="room-list"></div>
         <button onclick="createRoom(prompt('Enter room code'))">Create Room</button>
         <button onclick="deleteRoom(prompt('Enter room code'))">Delete Room</button>
-        <button id="join-room-btn" style="display:none;" onclick="joinRoom()">Join Selected Room</button>
-        <div id="selected-room"></div>
     </div>
 
-    <!-- Core/Pioneer Account Creation -->
-    <div id="create-account-btn-container" style="display:none;">
-        <button onclick="createAccount()">Create User Account</button>
+    <!-- Admin Account Creation (Core/Pioneer) -->
+    <div class="admin-panel">
+        <h3>Create User Account</h3>
+        <button onclick="createUserAccount()">Create Account</button>
     </div>
 
-</div>
-
-<!-- Account Popup -->
-<div id="account-popup" class="popup-container" style="display:none;">
-    <h3>Account Settings</h3>
-    <label>Display Name:</label>
-    <input id="display-name-input" type="text">
-    <button onclick="_CHANGE_DISPLAY()">Change Display Name</button>
-
-    <label>Password:</label>
-    <input id="password-input" type="password">
-    <button onclick="_CHANGE_PASSWORD()">Change Password</button>
-
-    <label>Equipped Title:</label>
-    <select id="title-dropdown"></select>
-    <button onclick="_CHANGE_TITLE()">Change Title</button>
-
-    <button onclick="startAuction()">Start Auction</button>
-    <button onclick="openShop()">Open Shop</button>
-    <button onclick="closeAccountPopup()">Close</button>
 </div>
 </body>
 </html>

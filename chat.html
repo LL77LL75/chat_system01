@@ -5,13 +5,11 @@
     <title>Chat App – Chat Room</title>
     <link rel="stylesheet" href="style.css">
     <script type="module" src="firebase-config.js"></script>
-    <script type="module" src="chat.js"></script>
+    <script type="module" src="app.js"></script>
 </head>
 <body>
+
 <div class="chat-container">
-
-    <h3 id="room-header">Room: </h3>
-
     <div id="messages" class="message-list"></div>
 
     <form id="chat-form" onsubmit="event.preventDefault(); sendMessage();">
@@ -19,8 +17,7 @@
         <button type="submit">Send</button>
     </form>
 
-    <a href="dashboard.html" class="button-link">Leave Chat</a>
-
+    <button onclick="leaveRoom()">Leave Chat</button>
 </div>
 </body>
 </html>
