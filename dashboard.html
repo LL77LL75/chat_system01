@@ -1,94 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8" />
     <title>Dashboard</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Load app.js first to make globals available -->
-    <script type="module" src="app.js"></script>
 </head>
 <body>
-
 <h2>Dashboard</h2>
-
 <button onclick="logout()">Logout</button>
 <button onclick="openAccountPopup()">Account</button>
 
 <h3>Rooms</h3>
 <div id="room-list"></div>
-
 <div id="room-info-panel" class="room-panel"></div>
 
 <!-- ACCOUNT POPUP -->
 <div id="account-popup" class="popup">
     <div class="popup-content">
         <h3>Account Settings</h3>
-
         <label>Display Name:</label>
         <input id="displayname-input" />
-
         <button onclick="changeDisplayName()">Save Display Name</button>
         <br><br>
-
         <button onclick="changePassword()">Change Password</button>
         <br><br>
-
         <label>Active Title:</label>
         <select id="title-select"></select>
         <button onclick="setActiveTitle()">Equip Title</button>
-
         <br><br>
-        <button onclick="createNewAccount()">Create New Account</button>
-
+        <button onclick="createNewAccount()">Create New Account (Core+Pioneer)</button>
         <br><br>
         <button onclick="closeAccountPopup()">Close</button>
     </div>
 </div>
 
 <script type="module">
-import { db, cleanupOldData } from "./app.js";
+import { db } from "./app.js";
 
-// Fill title dropdown
 function refreshTitleList() {
     if (!window.currentUser) return;
-
     const sel = document.getElementById("title-select");
-    if (!sel) return;
-
     sel.innerHTML = "";
-
-    const titles = window.currentUser.ownedTitles || {};
-
+    const titles = window.currentUser.titles || {};
     Object.keys(titles).forEach(t => {
         const opt = document.createElement("option");
         opt.value = t;
         opt.textContent = t;
         sel.appendChild(opt);
     });
-
-    if (window.currentUser.activeTitle) {
-        sel.value = window.currentUser.activeTitle;
-    }
+    if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
 }
 
-// After page loads
-window.onload = async () => {
-    if (!window.currentUser) {
-        window.location.href = "index.html";
-        return;
-    }
-
+window.onload = () => {
+    if (!window.currentUser) window.location.href = "index.html";
     refreshTitleList();
-
-    // run cleanup when dashboard loads
-    cleanupOldData().catch(console.warn);
-
-    // loadRooms is defined in app.js and attached to window
-    if (typeof loadRooms === "function") {
-        loadRooms();
-    }
+    loadRooms(); // from app.js
 };
 </script>
 
+<script type="module" src="app.js"></script>
 </body>
 </html>

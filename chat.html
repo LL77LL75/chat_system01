@@ -1,25 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8" />
     <title>Chat Room</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Ensure app.js loads before chat.js so globals exist -->
-    <script type="module" src="app.js"></script>
-    <script type="module" src="chat.js" defer></script>
 </head>
 <body>
 
 <h2 id="room-title"></h2>
-
 <div id="messages"></div>
 
 <form onsubmit="event.preventDefault(); sendMessage();">
-    <input id="msg-input" placeholder="Type message..." autocomplete="off">
+    <input id="msg-input" placeholder="Type message...">
     <button type="submit">Send</button>
 </form>
 
 <button onclick="leaveRoom()">Leave Room</button>
 
+<script type="module" src="chat.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>

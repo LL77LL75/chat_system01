@@ -1,107 +1,96 @@
-// chat.js — handles chat page UI behavior
-
 import { db } from "./app.js";
-import {
-    ref, push, onValue, remove, get
-} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { ref, push, onValue, remove, set, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-// Parse ?room=XXXX
 const params = new URLSearchParams(window.location.search);
 const room = params.get("room");
+document.getElementById("room-title").textContent = "Room: " + room;
 
-// Guard if no room provided
-if (!room) {
-    document.body.innerHTML = "<p>No room specified. <a href='dashboard.html'>Back to dashboard</a></p>";
-    throw new Error("No room specified");
-}
-
-const roomTitleEl = document.getElementById("room-title");
-if (roomTitleEl) roomTitleEl.textContent = "Room: " + room;
-
-/* ==========================
-   LOAD MESSAGES
-========================== */
 const msgBox = document.getElementById("messages");
 
-onValue(ref(db, "messages/" + room), (snap) => {
-    if (!msgBox) return;
+function addMessageDiv(m,key){
+    const div=document.createElement("div");
+    div.dataset.key=key;
+    if(m.system){div.className="system-msg"; div.textContent=m.text;}
+    else{
+        let t = m.title ? `[${m.title}] ${m.sender}: ${m.text}` : `${m.sender}: ${m.text}`;
+        div.textContent=t;
 
-    msgBox.innerHTML = "";
-
-    // Snap may be null when there are no messages
-    snap.forEach((msgSnap) => {
-        const m = msgSnap.val() || {};
-        const div = document.createElement("div");
-
-        if (m.system) {
-            div.className = "system-msg";
-            // Display friendly text for join/leave messages
-            div.textContent = m.text || `${m.sender} (system)`;
-        } else {
-            let t = (m.title ? "[" + m.title + "] " : "") + (m.sender ? m.sender + ": " : "") + (m.text || "");
-            div.textContent = t;
+        // delete button
+        if(m.sender===window.currentUser.username){
+            const delBtn=document.createElement("button");
+            delBtn.textContent="Delete";
+            delBtn.onclick=()=>remove(ref(db,`messages/${room}/${key}`));
+            div.appendChild(document.createElement("br"));
+            div.appendChild(delBtn);
         }
 
-        msgBox.appendChild(div);
-    });
+        // reaction button
+        const reactBtn=document.createElement("button");
+        reactBtn.textContent="...";
+        reactBtn.onclick=()=>{
+            const emoji=prompt("Enter reaction:");
+            if(!emoji) return;
+            push(ref(db,`messages/${room}/${key}/reactions`),{user:window.currentUser.username,emoji,time:Date.now()});
+        };
+        div.appendChild(reactBtn);
+    }
+    msgBox.appendChild(div);
+}
 
-    // scroll to bottom
-    msgBox.scrollTop = msgBox.scrollHeight;
-}, (err) => {
-    console.warn("messages onValue error:", err);
+onValue(ref(db,`messages/${room}`),snap=>{
+    msgBox.innerHTML="";
+    snap.forEach(msgSnap=>addMessageDiv(msgSnap.val(),msgSnap.key));
+    msgBox.scrollTop=msgBox.scrollHeight;
 });
 
-/* ==========================
-   SEND MESSAGE
-========================== */
-window.sendMessage = async function () {
-    const user = window.currentUser;
-    if (!user) return alert("Not logged in.");
+window.sendMessage=function(){
+    const user=window.currentUser;
+    if(!user) return alert("Not logged in.");
+    let text=document.getElementById("msg-input").value.trim();
+    if(!text) return;
+    document.getElementById("msg-input").value="";
 
-    const input = document.getElementById("msg-input");
-    if (!input) return;
-
-    const text = input.value.trim();
-    if (!text) return;
-
-    input.value = "";
-
-    try {
-        await push(ref(db, "messages/" + room), {
-            sender: user.username,
-            text,
-            time: Date.now(),
-            title: user.activeTitle || "",
-            system: false
-        });
-    } catch (err) {
-        console.error("sendMessage error:", err);
-        alert("Failed to send message.");
+    // commands
+    if(text.startsWith("?/")){
+        const parts=text.split(" ");
+        const cmd=parts[0];
+        const rank=user.rank;
+        switch(cmd){
+            case "?/msg":
+                const target=parts[1];
+                const content=text.split('"')[1];
+                push(ref(db,`users/${target}/privateMessages`),{from:user.username,text:content,time:Date.now()});
+                return;
+            case "?/ban":
+                if(!["admin","high","core","pioneer"].includes(rank)) return alert("No permission");
+                const targetBan=parts[1]; const level=parts[2]||1;
+                update(ref(db,`users/${targetBan}/banned`),{[user.username]:parseInt(level)});
+                push(ref(db,`messages/${room}`),{sender:"SYSTEM",text:`${targetBan} banned at level ${level}`,system:true,time:Date.now()});
+                return;
+            case "?/mute":
+                if(!["admin","high","core","pioneer"].includes(rank)) return alert("No permission");
+                const targetMute=parts[1]; const lvl=parts[2]||1;
+                update(ref(db,`users/${targetMute}/muted`),{[user.username]:parseInt(lvl)});
+                push(ref(db,`messages/${room}`),{sender:"SYSTEM",text:`${targetMute} muted at level ${lvl}`,system:true,time:Date.now()});
+                return;
+            case "?/unban":
+                remove(ref(db,`users/${parts[1]}/banned/${user.username}`));
+                return;
+            case "?/unmute":
+                remove(ref(db,`users/${parts[1]}/muted/${user.username}`));
+                return;
+            case "?/rank":
+                if(!["pioneer"].includes(rank)) return alert("No permission");
+                update(ref(db,`users/${parts[1]}`),{rank:parts[2]});
+                return;
+        }
     }
+
+    push(ref(db,`messages/${room}`),{sender:user.username,text,title:user.activeTitle||"",time:Date.now()});
 };
 
-/* ==========================
-   LEAVE ROOM
-========================== */
-window.leaveRoom = async function () {
-    if (!window.currentUser) return alert("Not logged in.");
-
-    const u = window.currentUser.username;
-
-    try {
-        await remove(ref(db, `roomMembers/${room}/${u}`));
-
-        await push(ref(db, `messages/${room}`), {
-            sender: u,
-            text: `${u} has left the chat.`,
-            time: Date.now(),
-            system: true
-        });
-
-        // Go back to dashboard
-        window.location.href = "dashboard.html";
-    } catch (err) {
-        console.error("leaveRoom error:", err);
-        alert("Failed to leave room.");
-    }
+window.leaveRoom=async function(){
+    const u=window.currentUser.username;
+    push(ref(db,`messages/${room}`),{sender:u,text:`[SYSTEM] ${u} has left the chat.`,system:true,time:Date.now()});
+    window.location.href="dashboard.html";
 };

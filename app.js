@@ -1,389 +1,170 @@
-// app.js — main application logic (complete)
-
+// app.js — TEMPORARY version with advanced commands
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import {
-    getDatabase, ref, get, set, push, onValue, update, remove
-} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { getDatabase, ref, get, set, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-// --- INIT FIREBASE ---
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-
-// Make db globally accessible for debugging if needed
 window.db = db;
 
-/* ============================================================
-   UTIL: USER LOAD / SAVE
-============================================================ */
-function loadUser() {
-    let u = localStorage.getItem("currentUser");
-    if (!u) return null;
-    try {
-        return JSON.parse(u);
-    } catch {
-        return null;
-    }
+function now(){return Date.now();}
+function loadUser(){let u=localStorage.getItem("currentUser");try{return JSON.parse(u);}catch{return null;}}
+function saveUser(user){localStorage.setItem("currentUser",JSON.stringify(user));}
+window.currentUser=loadUser();
+
+// Cleanup old messages/logs (>15 days)
+async function cleanupOldData(){
+    const cutoff=now()-15*24*60*60*1000;
+    const msgsSnap=await get(ref(db,"messages"));
+    msgsSnap.forEach(roomSnap=>{roomSnap.forEach(msgSnap=>{if(msgSnap.val().time<cutoff) remove(ref(db,`messages/${roomSnap.key}/${msgSnap.key}`));});});
+    const logsSnap=await get(ref(db,"logs"));
+    logsSnap.forEach(logSnap=>{if(logSnap.val().time<cutoff) remove(ref(db,`logs/${logSnap.key}`));});
 }
+cleanupOldData();
 
-function saveUser(user) {
-    localStorage.setItem("currentUser", JSON.stringify(user));
-}
+// --- LOGIN ---
+window.normalLogin=async function(username,password){
+    const snap=await get(ref(db,`users/${username}`));
+    if(!snap.exists()) return alert("User not found.");
+    const data=snap.val();
+    if(data.password!==password) return alert("Wrong password.");
+    window.currentUser={username,...data};
+    saveUser(window.currentUser);
+    push(ref(db,"logs"),{type:"login",user:username,time:now()});
+    window.location.href="dashboard.html";
+};
 
-// Global user
-window.currentUser = loadUser();
+// --- LOGOUT ---
+window.logout=function(){
+    if(window.currentUser) push(ref(db,"logs"),{type:"logout",user:window.currentUser.username,time:now()});
+    localStorage.removeItem("currentUser");
+    window.location.href="index.html";
+};
 
-/* ============================================================
-   CLEANUP: remove old items older than 15 days
-   - messages: messages/{room}/{messageId} (field: time)
-   - reactions: reactions/{room}/{messageId}/{reactionId} (field: time)
-   - logins: logins/{id} (field: time)
-============================================================ */
-export async function cleanupOldData() {
-    try {
-        const FIFTEEN_DAYS_MS = 15 * 24 * 60 * 60 * 1000;
-        const cutoff = Date.now() - FIFTEEN_DAYS_MS;
-
-        // 1) Messages
-        const messagesSnap = await get(ref(db, "messages"));
-        if (messagesSnap.exists()) {
-            messagesSnap.forEach((roomSnap) => {
-                const roomKey = roomSnap.key;
-                roomSnap.forEach((msgSnap) => {
-                    const msgKey = msgSnap.key;
-                    const m = msgSnap.val() || {};
-                    const t = m.time || 0;
-                    if (t < cutoff) {
-                        remove(ref(db, `messages/${roomKey}/${msgKey}`)).catch(console.warn);
-                    }
-                });
-            });
-        }
-
-        // 2) Reactions (structure flexible — we scan multiple nested layers)
-        const reactionsSnap = await get(ref(db, "reactions"));
-        if (reactionsSnap.exists()) {
-            reactionsSnap.forEach((roomSnap) => {
-                const roomKey = roomSnap.key;
-                roomSnap.forEach((msgSnap) => {
-                    const msgKey = msgSnap.key;
-                    msgSnap.forEach((reactSnap) => {
-                        const reactKey = reactSnap.key;
-                        const r = reactSnap.val() || {};
-                        const t = r.time || 0;
-                        if (t < cutoff) {
-                            remove(ref(db, `reactions/${roomKey}/${msgKey}/${reactKey}`)).catch(console.warn);
-                        }
-                    });
-                });
-            });
-        }
-
-        // 3) Logins (includes both login/logout entries stored under "logins")
-        const loginsSnap = await get(ref(db, "logins"));
-        if (loginsSnap.exists()) {
-            loginsSnap.forEach((entrySnap) => {
-                const key = entrySnap.key;
-                const data = entrySnap.val() || {};
-                const t = data.time || 0;
-                if (t < cutoff) {
-                    remove(ref(db, `logins/${key}`)).catch(console.warn);
-                }
-            });
-        }
-
-        // Also optionally prune old "rooms" and "roomMembers" entries that are empty
-        // (not removing rooms themselves; you might want a server-side job for heavy pruning)
-    } catch (err) {
-        console.error("cleanupOldData error:", err);
-    }
-}
-
-/* ============================================================
-   LOGIN
-============================================================ */
-export async function normalLogin(username, password) {
-    if (!username || !password) return alert("Missing username or password.");
-
-    try {
-        const userRef = ref(db, "users/" + username);
-        const snap = await get(userRef);
-
-        if (!snap.exists()) {
-            alert("User not found.");
-            return;
-        }
-
-        const data = snap.val();
-
-        if (data.password !== password) {
-            alert("Wrong password.");
-            return;
-        }
-
-        window.currentUser = { username, ...data };
-        saveUser(window.currentUser);
-
-        // Record login
-        push(ref(db, "logins"), {
-            user: username,
-            time: Date.now(),
-            type: "login"
-        }).catch(console.warn);
-
-        // Run cleanup opportunistically when someone logs in
-        cleanupOldData().catch(console.warn);
-
-        window.location.href = "dashboard.html";
-    } catch (err) {
-        console.error("normalLogin failed", err);
-        alert("Login failed. See console for details.");
-    }
-}
-
-/* ============================================================
-   LOGOUT
-============================================================ */
-export async function logout() {
-    try {
-        if (window.currentUser) {
-            push(ref(db, "logins"), {
-                user: window.currentUser.username,
-                time: Date.now(),
-                type: "logout"
-            }).catch(console.warn);
-        }
-
-        localStorage.removeItem("currentUser");
-        window.currentUser = null;
-
-        // run cleanup
-        cleanupOldData().catch(console.warn);
-
-        window.location.href = "index.html";
-    } catch (err) {
-        console.error("logout failed", err);
-    }
-}
-
-/* ============================================================
-   ROOM PANEL + JOIN ROOM
-   - loadRooms() is safe to call only on pages that contain the DOM elements
-============================================================ */
-export function loadRooms() {
-    const list = document.getElementById("room-list");
-    const panel = document.getElementById("room-info-panel");
-
-    // If page doesn't have the elements, bail out
-    if (!list || !panel) return;
-
-    // Listen for rooms list
-    onValue(ref(db, "rooms"), (snap) => {
-        // guard again in callback in case DOM changed
-        if (!list) return;
-
-        list.innerHTML = "";
-
-        snap.forEach((roomNode) => {
-            const room = roomNode.key;
-
-            const btn = document.createElement("button");
-            btn.className = "room-btn";
-            btn.textContent = room;
-
-            btn.onclick = () => {
-                // load room panel (do NOT enter room yet)
-                loadRoomInfo(room);
-            };
-
+// --- DASHBOARD ROOMS ---
+window.loadRooms=function(){
+    const list=document.getElementById("room-list");
+    const panel=document.getElementById("room-info-panel");
+    if(!list||!panel) return;
+    onValue(ref(db,"rooms"),snap=>{
+        list.innerHTML="";
+        snap.forEach(roomNode=>{
+            const room=roomNode.key;
+            const btn=document.createElement("button");
+            btn.className="room-btn";
+            btn.textContent=room;
+            btn.onclick=()=>window.loadRoomInfo(room);
             list.appendChild(btn);
         });
-    }, (err) => {
-        console.warn("loadRooms onValue error:", err);
     });
-}
+};
 
-export function loadRoomInfo(room) {
-    const panel = document.getElementById("room-info-panel");
-    if (!panel) return;
-
-    onValue(ref(db, "roomMembers/" + room), (snap) => {
-        let members = [];
-        snap.forEach((userSnap) => {
-            members.push(userSnap.key);
-        });
-
-        panel.innerHTML = `
+window.loadRoomInfo=function(room){
+    const panel=document.getElementById("room-info-panel");
+    if(!panel) return;
+    onValue(ref(db,`rooms/${room}/members`),snap=>{
+        let members=[];
+        snap.forEach(userSnap=>members.push(userSnap.key));
+        panel.innerHTML=`
             <h3>Room: ${room}</h3>
             <p>Users inside:</p>
-            <ul>${members.map(u => `<li>${u}</li>`).join("")}</ul>
-            <button id="join-room-btn">Join Room</button>
+            <ul>${members.map(u=>`<li>${u}</li>`).join("")}</ul>
+            <button onclick="joinRoom('${room}')">Join Room</button>
         `;
-
-        const joinBtn = document.getElementById("join-room-btn");
-        if (joinBtn) {
-            joinBtn.onclick = () => joinRoom(room);
-        }
-    }, (err) => {
-        console.warn("loadRoomInfo onValue error:", err);
     });
-}
-
-export async function joinRoom(room) {
-    if (!window.currentUser) return alert("Not logged in.");
-    if (!room) return;
-
-    const user = window.currentUser.username;
-
-    try {
-        await set(ref(db, `roomMembers/${room}/${user}`), true);
-
-        // send join message (friendly text, not prefixed with [SYSTEM])
-        await push(ref(db, `messages/${room}`), {
-            sender: user,
-            text: `${user} has joined the chat.`,
-            time: Date.now(),
-            system: true
-        });
-
-        // optional: run cleanup when rooms are joined
-        cleanupOldData().catch(console.warn);
-
-        window.location.href = "chat.html?room=" + encodeURIComponent(room);
-    } catch (err) {
-        console.error("joinRoom failed:", err);
-        alert("Failed to join room.");
+    const rank=window.currentUser?.rank;
+    if(["admin","high","core","pioneer"].includes(rank)){
+        onValue(ref(db,`rooms/${room}/banned`),bSnap=>{panel.innerHTML+=`<p>Banned: ${bSnap.exists()?Object.keys(bSnap.val()).join(", "):"None"}</p>`;});
+        onValue(ref(db,`rooms/${room}/muted`),mSnap=>{panel.innerHTML+=`<p>Muted: ${mSnap.exists()?Object.keys(mSnap.val()).join(", "):"None"}</p>`;});
     }
-}
+};
 
-/* ============================================================
-   ACCOUNT POPUP
-============================================================ */
-export function openAccountPopup() {
-    const popup = document.getElementById("account-popup");
-    if (!popup) return;
+// --- JOIN ROOM ---
+window.joinRoom=async function(room){
+    if(!window.currentUser) return alert("Not logged in.");
+    const u=window.currentUser.username;
+    await set(ref(db,`rooms/${room}/members/${u}`),now());
+    push(ref(db,`messages/${room}`),{sender:u,text:`[SYSTEM] ${u} has joined the chat.`,system:true,time:now()});
+    push(ref(db,"logs"),{type:"join",user:u,room,time:now()});
+    window.location.href=`chat.html?room=${room}`;
+};
 
-    document.getElementById("displayname-input").value =
-        window.currentUser?.displayName || "";
+// --- ACCOUNT POPUP ---
+window.openAccountPopup=function(){
+    const popup=document.getElementById("account-popup");
+    if(!popup) return;
+    document.getElementById("displayname-input").value=window.currentUser?.displayName||"";
+    popup.style.display="block";
+};
+window.closeAccountPopup=function(){document.getElementById("account-popup").style.display="none";};
 
-    popup.style.display = "block";
-}
-
-export function closeAccountPopup() {
-    const popup = document.getElementById("account-popup");
-    if (!popup) return;
-
-    popup.style.display = "none";
-}
-
-/* ============================================================
-   CHANGE DISPLAY NAME
-============================================================ */
-export async function changeDisplayName() {
-    const input = document.getElementById("displayname-input");
-    if (!input) return alert("Display name input not found.");
-
-    const newName = input.value.trim();
-    if (!newName) return alert("Display name cannot be empty.");
-    if (!window.currentUser) return alert("Not logged in.");
-
-    const u = window.currentUser.username;
-
-    await update(ref(db, "users/" + u), { displayName: newName });
-
-    window.currentUser.displayName = newName;
+// --- CHANGE DISPLAYNAME ---
+window.changeDisplayName=async function(){
+    const newName=document.getElementById("displayname-input").value.trim();
+    if(!newName) return alert("Display name cannot be empty.");
+    const u=window.currentUser.username;
+    await update(ref(db,`users/${u}`),{displayName:newName});
+    window.currentUser.displayName=newName;
     saveUser(window.currentUser);
-
     alert("Display name updated.");
-}
+};
 
-/* ============================================================
-   CHANGE PASSWORD
-============================================================ */
-export async function changePassword() {
-    if (!window.currentUser) return alert("Not logged in.");
-
-    const pw = prompt("Enter new password:");
-    if (!pw) return;
-
-    const u = window.currentUser.username;
-
-    await update(ref(db, "users/" + u), { password: pw });
-
-    window.currentUser.password = pw;
+// --- CHANGE PASSWORD ---
+window.changePassword=async function(){
+    const pw=prompt("Enter new password:");
+    if(!pw) return;
+    const u=window.currentUser.username;
+    await update(ref(db,`users/${u}`),{password:pw});
+    window.currentUser.password=pw;
     saveUser(window.currentUser);
-
     alert("Password updated.");
-}
+};
 
-/* ============================================================
-   SET ACTIVE TITLE
-============================================================ */
-export async function setActiveTitle() {
-    if (!window.currentUser) return alert("Not logged in.");
-
-    const sel = document.getElementById("title-select");
-    if (!sel) return alert("Title selector not found.");
-
-    const title = sel.value;
-    const u = window.currentUser.username;
-
-    await update(ref(db, "users/" + u), { activeTitle: title });
-
-    window.currentUser.activeTitle = title;
+// --- SET ACTIVE TITLE ---
+window.setActiveTitle=async function(){
+    const title=document.getElementById("title-select").value;
+    const u=window.currentUser.username;
+    await update(ref(db,`users/${u}`),{activeTitle:title});
+    window.currentUser.activeTitle=title;
     saveUser(window.currentUser);
-
     alert("Title updated.");
-}
+};
 
-/* ============================================================
-   CREATE NEW ACCOUNT (CORE + PIONEER)
-============================================================ */
-export async function createNewAccount() {
-    if (!window.currentUser) return alert("Not logged in.");
-
-    const rank = window.currentUser.rank;
-
-    if (!(rank === "core" || rank === "pioneer"))
-        return alert("No permission.");
-
-    const username = prompt("New username:");
-    if (!username) return;
-
-    const password = prompt("New password:");
-    if (!password) return;
-
-    await set(ref(db, "users/" + username), {
-        password: password,
-        displayName: username,
-        rank: "newbie",
-        credits: 0,
-        activeTitle: "",
-        ownedTitles: {}
+// --- CREATE NEW ACCOUNT (CORE+PIONEER) ---
+window.createNewAccount=async function(){
+    if(!window.currentUser) return alert("Not logged in.");
+    const rank=window.currentUser.rank;
+    if(!["core","pioneer"].includes(rank)) return alert("No permission.");
+    const username=prompt("New username:");
+    if(!username) return;
+    const password=prompt("New password:");
+    if(!password) return;
+    const userRank=prompt("Rank (newbie/member/admin/high/core/pioneer):","newbie");
+    await set(ref(db,`users/${username}`),{
+        password,
+        displayName:username,
+        rank:userRank,
+        activeTitle:"newbie",
+        titles:{newbie:true},
+        createdAt:now()
     });
-
     alert("Account created!");
-}
+};
 
-/* ============================================================
-   EXPORTS & GLOBALS
-   - Export db so other modules (chat.js, dashboard inline) can import it
-   - Also attach common functions to window for inline HTML calls
-============================================================ */
+// --- TEMPORARY SETUP BUTTON (Sample accounts + rooms) ---
+window.setupSampleAccountsAndRooms=async function(){
+    const samples=[["Ian01","Ian01","pioneer"],["ML","123","core"],["Nathaniel01","Nathaniel01","high"],["emman01","emman01","core"],["jf01","jf01","high"],["test2","test2","pioneer"],["testbanned","testbanned","newbie"],["testmuted","testmuted","newbie"]];
+    for(const [u,p,r] of samples){
+        await set(ref(db,`users/${u}`),{password:p,displayName:u,rank:r,activeTitle:"newbie",titles:{newbie:true},createdAt:now()});
+    }
+    await update(ref(db,"users/testbanned"),{banned:{global:1}});
+    await update(ref(db,"users/testmuted"),{muted:{global:1}});
+    const rooms=["6ord","6sel"];
+    for(const room of rooms){
+        await set(ref(db,`rooms/${room}`),{createdBy:"system",createdAt:Date.parse("2025-11-26"),closed:false});
+        await push(ref(db,`messages/${room}`),{sender:"SYSTEM",text:`[SYSTEM] activated 26/11/2025`,system:true,time:Date.parse("2025-11-26")});
+    }
+    alert("Sample accounts and rooms created!");
+};
 
-// Expose to other modules
-export { db };
-
-// Attach to window so inline handlers (index.html, dashboard.html) can call them
-window.normalLogin = normalLogin;
-window.logout = logout;
-window.loadRooms = loadRooms;
-window.loadRoomInfo = loadRoomInfo;
-window.joinRoom = joinRoom;
-window.openAccountPopup = openAccountPopup;
-window.closeAccountPopup = closeAccountPopup;
-window.changeDisplayName = changeDisplayName;
-window.changePassword = changePassword;
-window.setActiveTitle = setActiveTitle;
-window.createNewAccount = createNewAccount;
-window.cleanupOldData = cleanupOldData;
+export {db};
