@@ -1,4 +1,4 @@
-// firebase-config.js — final version
+// firebase-config.js — clean version
 export const firebaseConfig = {
     apiKey: "AIzaSyCY5_krGDfHcp4ZmUe5RXo7BaKYUQwAM8E",
     authDomain: "chat-app-6767.firebaseapp.com",

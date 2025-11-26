@@ -1,5 +1,5 @@
 import { db } from "./app.js";
-import { ref, push, onValue, remove, set, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { ref, push, onValue, remove, set, update, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
 const params = new URLSearchParams(window.location.search);
 const room = params.get("room");
@@ -15,7 +15,6 @@ function addMessageDiv(m,key){
         let t = m.title ? `[${m.title}] ${m.sender}: ${m.text}` : `${m.sender}: ${m.text}`;
         div.textContent=t;
 
-        // delete button
         if(m.sender===window.currentUser.username){
             const delBtn=document.createElement("button");
             delBtn.textContent="Delete";
@@ -24,7 +23,6 @@ function addMessageDiv(m,key){
             div.appendChild(delBtn);
         }
 
-        // reaction button
         const reactBtn=document.createElement("button");
         reactBtn.textContent="...";
         reactBtn.onclick=()=>{
@@ -43,14 +41,16 @@ onValue(ref(db,`messages/${room}`),snap=>{
     msgBox.scrollTop=msgBox.scrollHeight;
 });
 
-window.sendMessage=function(){
+window.sendMessage=async function(){
     const user=window.currentUser;
     if(!user) return alert("Not logged in.");
+    const mutedSnap = await get(ref(db,`users/${user.username}/muted`));
+    if(mutedSnap.exists()) return alert("You are muted and cannot chat.");
+
     let text=document.getElementById("msg-input").value.trim();
     if(!text) return;
     document.getElementById("msg-input").value="";
 
-    // commands
     if(text.startsWith("?/")){
         const parts=text.split(" ");
         const cmd=parts[0];

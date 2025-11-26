@@ -1,4 +1,4 @@
-// app.js — TEMPORARY version with advanced commands
+// app.js — clean version with advanced commands, bans and mutes
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getDatabase, ref, get, set, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -72,6 +72,7 @@ window.loadRoomInfo=function(room){
             <button onclick="joinRoom('${room}')">Join Room</button>
         `;
     });
+
     const rank=window.currentUser?.rank;
     if(["admin","high","core","pioneer"].includes(rank)){
         onValue(ref(db,`rooms/${room}/banned`),bSnap=>{panel.innerHTML+=`<p>Banned: ${bSnap.exists()?Object.keys(bSnap.val()).join(", "):"None"}</p>`;});
@@ -83,6 +84,8 @@ window.loadRoomInfo=function(room){
 window.joinRoom=async function(room){
     if(!window.currentUser) return alert("Not logged in.");
     const u=window.currentUser.username;
+    const bannedSnap=await get(ref(db,`users/${u}/banned`));
+    if(bannedSnap.exists()) return alert("You are banned and cannot join rooms.");
     await set(ref(db,`rooms/${room}/members/${u}`),now());
     push(ref(db,`messages/${room}`),{sender:u,text:`[SYSTEM] ${u} has joined the chat.`,system:true,time:now()});
     push(ref(db,"logs"),{type:"join",user:u,room,time:now()});
@@ -149,22 +152,6 @@ window.createNewAccount=async function(){
         createdAt:now()
     });
     alert("Account created!");
-};
-
-// --- TEMPORARY SETUP BUTTON (Sample accounts + rooms) ---
-window.setupSampleAccountsAndRooms=async function(){
-    const samples=[["Ian01","Ian01","pioneer"],["ML","123","core"],["Nathaniel01","Nathaniel01","high"],["emman01","emman01","core"],["jf01","jf01","high"],["test2","test2","pioneer"],["testbanned","testbanned","newbie"],["testmuted","testmuted","newbie"],["LL77LL75","APP#789","pioneer"]];
-    for(const [u,p,r] of samples){
-        await set(ref(db,`users/${u}`),{password:p,displayName:u,rank:r,activeTitle:"newbie",titles:{newbie:true},createdAt:now()});
-    }
-    await update(ref(db,"users/testbanned"),{banned:{global:1}});
-    await update(ref(db,"users/testmuted"),{muted:{global:1}});
-    const rooms=["6ord","6sel"];
-    for(const room of rooms){
-        await set(ref(db,`rooms/${room}`),{createdBy:"system",createdAt:Date.parse("2025-11-26"),closed:false});
-        await push(ref(db,`messages/${room}`),{sender:"SYSTEM",text:`[SYSTEM] activated 26/11/2025`,system:true,time:Date.parse("2025-11-26")});
-    }
-    alert("Sample accounts and rooms created!");
 };
 
 export {db};

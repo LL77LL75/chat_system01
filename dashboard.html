@@ -35,7 +35,6 @@
 
 <script type="module">
 import { db } from "./app.js";
-
 function refreshTitleList() {
     if (!window.currentUser) return;
     const sel = document.getElementById("title-select");
@@ -49,11 +48,10 @@ function refreshTitleList() {
     });
     if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
 }
-
 window.onload = () => {
     if (!window.currentUser) window.location.href = "index.html";
     refreshTitleList();
-    loadRooms(); // from app.js
+    loadRooms();
 };
 </script>
 
