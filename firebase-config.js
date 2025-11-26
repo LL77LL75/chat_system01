@@ -1,9 +1,6 @@
-// firebase-config.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getDatabase } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+// firebase-config.js — final version
 
-// Firebase configuration
-const firebaseConfig = {
+export const firebaseConfig = {
     apiKey: "AIzaSyCY5_krGDfHcp4ZmUe5RXo7BaKYUQwAM8E",
     authDomain: "chat-app-6767.firebaseapp.com",
     databaseURL: "https://chat-app-6767-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -13,7 +10,3 @@ const firebaseConfig = {
     appId: "1:705833150639:web:618339099f129a4ccacc5a",
     measurementId: "G-3P9WH9S08E"
 };
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app);

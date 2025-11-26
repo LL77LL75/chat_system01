@@ -1,88 +1,77 @@
-import { db } from './firebase-config.js';
-import { ref, push, onValue, remove, get, update } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js';
+// chat.js
 
-window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-window.roomCode = new URLSearchParams(window.location.search).get("room");
-document.getElementById("room-header").textContent = "Room: " + window.roomCode;
+import { db } from "./app.js";
+import {
+    ref, push, set, onValue, remove
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-// ------------------------
-// Join Message
-// ------------------------
-async function sendJoinMessage() {
-    const msgRef = ref(db, `messages/${window.roomCode}`);
-    let text = "";
-    switch(window.currentUser.rank){
-        case "pioneer": text = "A GOD HAS ARRIVED"; break;
-        case "core":
-        case "high": text = `${window.currentUser.displayName || window.currentUser.username} joins the chat...`; break;
-        default: text = `${window.currentUser.displayName || window.currentUser.username} has joined the chat`; break;
-    }
-    await push(msgRef, { sender: "system", message: text, timestamp: Date.now() });
-}
-sendJoinMessage();
+// Parse ?room=XXXX
+const params = new URLSearchParams(window.location.search);
+const room = params.get("room");
 
-// ------------------------
-// Leave Message
-// ------------------------
-window.addEventListener("beforeunload", async ()=>{
-    const msgRef = ref(db, `messages/${window.roomCode}`);
-    let text = "";
-    switch(window.currentUser.rank){
-        case "pioneer": text = `${window.currentUser.displayName || window.currentUser.username} has left`; break;
-        case "core":
-        case "high": text = `${window.currentUser.displayName || window.currentUser.username} leaves the chat...`; break;
-        default: text = `${window.currentUser.displayName || window.currentUser.username} has left the chat`; break;
-    }
-    await push(msgRef, { sender: "system", message: text, timestamp: Date.now() });
+document.getElementById("room-title").textContent = "Room: " + room;
+
+/* ==========================
+   LOAD MESSAGES
+=========================== */
+const msgBox = document.getElementById("messages");
+
+onValue(ref(db, "messages/" + room), (snap) => {
+    msgBox.innerHTML = "";
+
+    snap.forEach((msgSnap) => {
+        const m = msgSnap.val();
+        const div = document.createElement("div");
+
+        if (m.system) {
+            div.className = "system-msg";
+            div.textContent = m.text;
+        } else {
+            let t = m.sender + ": " + m.text;
+            if (m.title) t = "[" + m.title + "] " + t;
+            div.textContent = t;
+        }
+
+        msgBox.appendChild(div);
+    });
+
+    msgBox.scrollTop = msgBox.scrollHeight;
 });
 
-// ------------------------
-// Send Chat Message
-// ------------------------
-window.sendMessage = async function(){
-    const input = document.getElementById("message-input");
-    const msg = input.value.trim();
-    if(!msg) return;
+/* ==========================
+   SEND MESSAGE
+=========================== */
+window.sendMessage = function () {
+    const user = window.currentUser;
+    if (!user) return alert("Not logged in.");
 
-    const msgRef = ref(db, `messages/${window.roomCode}`);
-    await push(msgRef, { sender: window.currentUser.username, message: msg, timestamp: Date.now() });
-    input.value = "";
-};
+    const text = document.getElementById("msg-input").value.trim();
+    if (!text) return;
 
-// ------------------------
-// Load Messages
-// ------------------------
-window.loadMessages = function(){
-    const messagesContainer = document.getElementById("messages");
-    const messagesRef = ref(db, `messages/${window.roomCode}`);
+    document.getElementById("msg-input").value = "";
 
-    onValue(messagesRef, snapshot=>{
-        messagesContainer.innerHTML = "";
-        snapshot.forEach(child=>{
-            const m = child.val();
-            const div = document.createElement("div");
-            div.classList.add("message");
-
-            if(m.sender === "system"){
-                div.style.color = "gray";
-                div.textContent = `[${new Date(m.timestamp).toLocaleTimeString()}] ${m.message}`;
-            } else if(["core","pioneer"].includes(window.currentUser.rank) && m.private){
-                div.textContent = `[${m.sender} -> You]: ${m.message} (hidden)`;
-            } else {
-                div.textContent = `[${m.sender}]: ${m.message}`;
-            }
-
-            messagesContainer.appendChild(div);
-
-            // Display reactions below the message
-            if(m.reactions){
-                const reactDiv = document.createElement("div");
-                reactDiv.style.fontSize = "smaller";
-                reactDiv.textContent = "Reactions: " + Object.entries(m.reactions).map(([user, r])=>`${user}: ${r}`).join(", ");
-                messagesContainer.appendChild(reactDiv);
-            }
-        });
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    push(ref(db, "messages/" + room), {
+        sender: user.username,
+        text,
+        time: Date.now(),
+        title: user.activeTitle || ""
     });
 };
-window.loadMessages();
+
+/* ==========================
+   LEAVE ROOM
+=========================== */
+window.leaveRoom = async function () {
+    const u = window.currentUser.username;
+
+    await remove(ref(db, `roomMembers/${room}/${u}`));
+
+    push(ref(db, `messages/${room}`), {
+        sender: u,
+        text: "[SYSTEM] " + u + " has left.",
+        time: Date.now(),
+        system: true
+    });
+
+    window.location.href = "dashboard.html";
+};
