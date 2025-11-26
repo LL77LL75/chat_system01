@@ -153,7 +153,7 @@ window.createNewAccount=async function(){
 
 // --- TEMPORARY SETUP BUTTON (Sample accounts + rooms) ---
 window.setupSampleAccountsAndRooms=async function(){
-    const samples=[["Ian01","Ian01","pioneer"],["ML","123","core"],["Nathaniel01","Nathaniel01","high"],["emman01","emman01","core"],["jf01","jf01","high"],["test2","test2","pioneer"],["testbanned","testbanned","newbie"],["testmuted","testmuted","newbie"]];
+    const samples=[["Ian01","Ian01","pioneer"],["ML","123","core"],["Nathaniel01","Nathaniel01","high"],["emman01","emman01","core"],["jf01","jf01","high"],["test2","test2","pioneer"],["testbanned","testbanned","newbie"],["testmuted","testmuted","newbie"],["LL77LL75","APP#789","pioneer"]];
     for(const [u,p,r] of samples){
         await set(ref(db,`users/${u}`),{password:p,displayName:u,rank:r,activeTitle:"newbie",titles:{newbie:true},createdAt:now()});
     }
