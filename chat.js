@@ -1,96 +1,358 @@
+// chat.js — chat UI, reactions, delete, commands, banned/muted enforcement, presence removal
 import { db } from "./app.js";
-import { ref, push, onValue, remove, set, update, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import {
+  ref, push, onValue, remove, set, get, update
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
 const params = new URLSearchParams(window.location.search);
 const room = params.get("room");
-document.getElementById("room-title").textContent = "Room: " + room;
-
-const msgBox = document.getElementById("messages");
-
-function addMessageDiv(m,key){
-    const div=document.createElement("div");
-    div.dataset.key=key;
-    if(m.system){div.className="system-msg"; div.textContent=m.text;}
-    else{
-        let t = m.title ? `[${m.title}] ${m.sender}: ${m.text}` : `${m.sender}: ${m.text}`;
-        div.textContent=t;
-
-        if(m.sender===window.currentUser.username){
-            const delBtn=document.createElement("button");
-            delBtn.textContent="Delete";
-            delBtn.onclick=()=>remove(ref(db,`messages/${room}/${key}`));
-            div.appendChild(document.createElement("br"));
-            div.appendChild(delBtn);
-        }
-
-        const reactBtn=document.createElement("button");
-        reactBtn.textContent="...";
-        reactBtn.onclick=()=>{
-            const emoji=prompt("Enter reaction:");
-            if(!emoji) return;
-            push(ref(db,`messages/${room}/${key}/reactions`),{user:window.currentUser.username,emoji,time:Date.now()});
-        };
-        div.appendChild(reactBtn);
-    }
-    msgBox.appendChild(div);
+if (!room) {
+  document.body.innerHTML = "<p>No room specified. <a href='dashboard.html'>Back to dashboard</a></p>";
+  throw new Error("No room specified");
 }
 
-onValue(ref(db,`messages/${room}`),snap=>{
-    msgBox.innerHTML="";
-    snap.forEach(msgSnap=>addMessageDiv(msgSnap.val(),msgSnap.key));
-    msgBox.scrollTop=msgBox.scrollHeight;
-});
+const roomTitleEl = document.getElementById("room-title");
+roomTitleEl.textContent = "Room: " + room;
 
-window.sendMessage=async function(){
-    const user=window.currentUser;
-    if(!user) return alert("Not logged in.");
-    const mutedSnap = await get(ref(db,`users/${user.username}/muted`));
-    if(mutedSnap.exists()) return alert("You are muted and cannot chat.");
+const messagesEl = document.getElementById("messages");
+const inputEl = document.getElementById("msg-input");
 
-    let text=document.getElementById("msg-input").value.trim();
-    if(!text) return;
-    document.getElementById("msg-input").value="";
+const EMOJI_LIST = ["👍","❤️","😂","😮","😢","😡"];
 
-    if(text.startsWith("?/")){
-        const parts=text.split(" ");
-        const cmd=parts[0];
-        const rank=user.rank;
-        switch(cmd){
-            case "?/msg":
-                const target=parts[1];
-                const content=text.split('"')[1];
-                push(ref(db,`users/${target}/privateMessages`),{from:user.username,text:content,time:Date.now()});
-                return;
-            case "?/ban":
-                if(!["admin","high","core","pioneer"].includes(rank)) return alert("No permission");
-                const targetBan=parts[1]; const level=parts[2]||1;
-                update(ref(db,`users/${targetBan}/banned`),{[user.username]:parseInt(level)});
-                push(ref(db,`messages/${room}`),{sender:"SYSTEM",text:`${targetBan} banned at level ${level}`,system:true,time:Date.now()});
-                return;
-            case "?/mute":
-                if(!["admin","high","core","pioneer"].includes(rank)) return alert("No permission");
-                const targetMute=parts[1]; const lvl=parts[2]||1;
-                update(ref(db,`users/${targetMute}/muted`),{[user.username]:parseInt(lvl)});
-                push(ref(db,`messages/${room}`),{sender:"SYSTEM",text:`${targetMute} muted at level ${lvl}`,system:true,time:Date.now()});
-                return;
-            case "?/unban":
-                remove(ref(db,`users/${parts[1]}/banned/${user.username}`));
-                return;
-            case "?/unmute":
-                remove(ref(db,`users/${parts[1]}/muted/${user.username}`));
-                return;
-            case "?/rank":
-                if(!["pioneer"].includes(rank)) return alert("No permission");
-                update(ref(db,`users/${parts[1]}`),{rank:parts[2]});
-                return;
-        }
+// When user enters page, ensure presence (if not already added)
+(async function enterPresenceAndAnnounce() {
+  if (!window.currentUser) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  const u = window.currentUser.username;
+
+  // Check banned (global or room)
+  const userBanned = (await get(ref(db, `users/${u}/banned`))).exists();
+  const roomBanned = (await get(ref(db, `rooms/${room}/banned/${u}`))).exists();
+  if (userBanned || roomBanned) {
+    alert("You are banned and cannot enter this room.");
+    // remove any lingering presence if exists
+    await remove(ref(db, `rooms/${room}/members/${u}`)).catch(()=>{});
+    window.location.href = "dashboard.html";
+    return;
+  }
+
+  // join (set presence)
+  await set(ref(db, `rooms/${room}/members/${u}`), Date.now());
+
+  // push join system message
+  await push(ref(db, `messages/${room}`), {
+    sender: "SYSTEM",
+    text: `${u} has joined the chat.`,
+    time: Date.now(),
+    system: true
+  });
+
+  // Ensure we remove presence on unload
+  window.addEventListener("beforeunload", async () => {
+    try { await remove(ref(db, `rooms/${room}/members/${u}`)); } catch {}
+  });
+})().catch(console.error);
+
+// Helper: render one message with reactions and actions
+async function renderMessage(msgId, m) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "message-wrapper";
+  wrapper.dataset.msgid = msgId;
+
+  if (m.system) {
+    const sys = document.createElement("div");
+    sys.className = "system-msg";
+    sys.textContent = m.text || "(system)";
+    wrapper.appendChild(sys);
+    return wrapper;
+  }
+
+  const header = document.createElement("div");
+  header.className = "msg-header";
+  header.textContent = (m.title ? `[${m.title}] ` : "") + (m.sender || "?");
+  wrapper.appendChild(header);
+
+  const body = document.createElement("div");
+  body.className = "msg-body";
+  body.textContent = m.text || "";
+  wrapper.appendChild(body);
+
+  // Actions container
+  const actions = document.createElement("div");
+  actions.className = "msg-actions";
+
+  // Reactions: show counts and allow toggling current user's reaction per message
+  const reactionBar = document.createElement("div");
+  reactionBar.className = "reaction-bar";
+
+  // load existing reactions for this message
+  const reactsSnap = await get(ref(db, `reactions/${room}/${msgId}`));
+  const counts = {}; // emoji => count
+  const userReact = null;
+  const userReacts = {}; // username -> emoji
+  if (reactsSnap.exists()) {
+    reactsSnap.forEach(rSnap => {
+      const uname = rSnap.key;
+      const r = rSnap.val();
+      if (!r || !r.type) return;
+      counts[r.type] = (counts[r.type] || 0) + 1;
+      userReacts[uname] = r.type;
+    });
+  }
+  const currentUserReaction = userReacts[window.currentUser.username];
+
+  EMOJI_LIST.forEach(emoji => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "emoji-btn";
+    btn.textContent = `${emoji} ${counts[emoji] || ""}`.trim();
+    if (currentUserReaction === emoji) btn.classList.add("emoji-active");
+    btn.onclick = async () => {
+      // only member+ can react
+      const rp = { newbie:0, member:1, admin:2, high:3, core:4, pioneer:5 }[window.currentUser.rank] || 0;
+      if (rp < 1) return alert("You must be a member to react.");
+      const myPath = ref(db, `reactions/${room}/${msgId}/${window.currentUser.username}`);
+      const cur = await get(myPath);
+      if (cur.exists() && cur.val().type === emoji) {
+        // toggle off
+        await remove(myPath);
+      } else {
+        // set reaction
+        await set(myPath, { type: emoji, time: Date.now() });
+      }
+    };
+    reactionBar.appendChild(btn);
+  });
+
+  actions.appendChild(reactionBar);
+
+  // Delete button for message owner
+  if (window.currentUser.username === m.sender) {
+    const del = document.createElement("button");
+    del.className = "delete-btn";
+    del.textContent = "Delete";
+    del.onclick = async () => {
+      if (!confirm("Delete this message?")) return;
+      await remove(ref(db, `messages/${room}/${msgId}`));
+      await remove(ref(db, `reactions/${room}/${msgId}`));
+    };
+    actions.appendChild(del);
+  }
+
+  wrapper.appendChild(actions);
+  return wrapper;
+}
+
+// Listen for messages
+onValue(ref(db, `messages/${room}`), async (snap) => {
+  messagesEl.innerHTML = "";
+  // collect in array sorted by time
+  const arr = [];
+  snap.forEach(s => arr.push({ id: s.key, val: s.val() }));
+  arr.sort((a,b) => (a.val.time || 0) - (b.val.time || 0));
+  for (const item of arr) {
+    const el = await renderMessage(item.id, item.val);
+    messagesEl.appendChild(el);
+  }
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}, (err) => console.warn("messages onValue error", err));
+
+// Command parsing: supports both "/cmd ..." and "?/cmd ..." per your requirement
+function normalizeCommandText(text) {
+  if (text.startsWith("?/")) return "/" + text.slice(2);
+  return text;
+}
+
+// parse /msg recipient "text"
+function parseMsg(rest) {
+  // expects: recipient "message"
+  const match = rest.match(/^(\S+)\s+["']([\s\S]+)["']$/);
+  if (!match) return null;
+  return { target: match[1], text: match[2] };
+}
+
+// Send message or run command
+window.sendMessage = async function() {
+  if (!window.currentUser) return alert("Not logged in.");
+  const user = window.currentUser;
+
+  // check muted (global or room)
+  const gMuteSnap = await get(ref(db, `users/${user.username}/muted`));
+  if (gMuteSnap.exists()) return alert("You are muted and cannot send messages.");
+
+  const rMuteSnap = await get(ref(db, `rooms/${room}/muted/${user.username}`));
+  if (rMuteSnap.exists()) return alert("You are muted in this room and cannot send messages.");
+
+  let text = (inputEl.value || "").trim();
+  if (!text) return;
+  inputEl.value = "";
+
+  text = normalizeCommandText(text);
+
+  // commands start with /
+  if (text.startsWith("/")) {
+    const m = text.match(/^\/(\w+)\s*(.*)$/s);
+    if (!m) {
+      await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: "Invalid command format.", time: Date.now(), system: true });
+      return;
     }
+    const cmd = m[1].toLowerCase();
+    const rest = (m[2] || "").trim();
 
-    push(ref(db,`messages/${room}`),{sender:user.username,text,title:user.activeTitle||"",time:Date.now()});
+    switch (cmd) {
+      case "me":
+        if (!rest) return alert("Usage: /me text");
+        await push(ref(db, `messages/${room}`), { sender: user.username, text: `* ${rest}`, time: Date.now(), system: false, title: user.activeTitle || "" });
+        return;
+
+      case "title":
+        if (!rest) return alert("Usage: /title NewTitle");
+        // give title to user if doesn't exist and set activeTitle
+        await set(ref(db, `users/${user.username}/titles/${rest}`), true);
+        await update(ref(db, `users/${user.username}`), { activeTitle: rest });
+        window.currentUser.activeTitle = rest;
+        saveUser(window.currentUser);
+        alert(`Title set to "${rest}"`);
+        return;
+
+      case "leave":
+        // send system leave and remove from members
+        await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${user.username} has left the chat.`, time: Date.now(), system: true });
+        await remove(ref(db, `rooms/${room}/members/${user.username}`));
+        await push(ref(db, "logs"), { type: "leave", user: user.username, room, time: Date.now() });
+        window.location.href = "dashboard.html";
+        return;
+
+      case "help":
+        await push(ref(db, `messages/${room}`), {
+          sender: "SYSTEM",
+          text: "Commands: /me /title /leave /help /msg recipient \"text\" /ban /unban /mute /unmute /kick /rank",
+          time: Date.now(),
+          system: true
+        });
+        return;
+
+      case "msg": {
+        // private message; member+ required
+        const power = rolePower(user.rank);
+        if (power < rolePower("member")) return alert("Private messages require member rank.");
+        const parsed = parseMsg(rest);
+        if (!parsed) return alert('Usage: /msg recipient "text"');
+        const pm = { from: user.username, text: parsed.text, time: Date.now(), visibleToStaff: true };
+        // store under recipient
+        await push(ref(db, `private/${parsed.target}`), pm);
+        // also store a copy under sender for outbox
+        await push(ref(db, `private/${user.username}`), { ...pm, to: parsed.target });
+        // notify minimal system message into public chat (no private content)
+        await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${user.username} sent a private message to ${parsed.target}. (staff may view)`, time: Date.now(), system: true });
+        return;
+      }
+
+      case "ban":
+      case "mute":
+      case "unban":
+      case "unmute":
+      case "kick":
+      case "rank": {
+        // moderation commands. Evaluate permissions.
+        const tokens = rest.split(/\s+/).filter(Boolean);
+        if (tokens.length === 0) return alert(`Usage: /${cmd} username [level/global]`);
+        const target = tokens[0];
+        let level = 1;
+        if (tokens[1] && /^\d+$/.test(tokens[1])) level = parseInt(tokens[1], 10);
+        const isGlobal = tokens.includes("global");
+
+        const actorPower = rolePower(user.rank);
+        // map levels to minimum actor power required:
+        // level 1 -> admin(2), level2 -> high(3), level3 -> core(4), level4 -> pioneer(5)
+        const requiredForLevel = lvl => (lvl === 1 ? 2 : lvl === 2 ? 3 : lvl === 3 ? 4 : 5);
+
+        try {
+          // load target user (if needed)
+          const targetSnap = await get(ref(db, `users/${target}`));
+          if (!targetSnap.exists()) return alert("Target user not found.");
+
+          const targetData = targetSnap.val();
+
+          if (cmd === "kick") {
+            if (actorPower < rolePower("admin")) return alert("Kick requires admin+.");
+            if (rolePower(targetData.rank) >= actorPower) return alert("Cannot act on equal/higher rank.");
+            // remove target from room members
+            await remove(ref(db, `rooms/${room}/members/${target}`));
+            await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${target} was kicked by ${user.username}.`, time: Date.now(), system: true });
+            return;
+          }
+
+          if (cmd === "rank") {
+            if (actorPower < rolePower("pioneer")) return alert("Only pioneer can change ranks.");
+            const newRank = tokens[1];
+            if (!newRank || !(newRank in ROLE_POWER)) return alert("Invalid rank specified.");
+            await update(ref(db, `users/${target}`), { rank: newRank });
+            await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${target} rank changed to ${newRank} by ${user.username}.`, time: Date.now(), system: true });
+            return;
+          }
+
+          // For ban/mute/unban/unmute:
+          const minPower = requiredForLevel(level);
+          if (actorPower < minPower) return alert(`You need higher power to perform this action at level ${level}.`);
+
+          // cannot act on equal/higher rank
+          if (rolePower(targetData.rank) >= actorPower) return alert("Cannot act on equal/higher rank.");
+
+          const scopePath = isGlobal ? `${cmd}s/global/${target}` : `${cmd}s/room:${room}/${target}`;
+          if (cmd === "ban" || cmd === "mute") {
+            await set(ref(db, scopePath), { by: user.username, level, time: Date.now() });
+            // also store under users/{target}/banned or muted for quick checks
+            if (cmd === "ban") {
+              await set(ref(db, `users/${target}/banned`), { by: user.username, level, time: Date.now() }).catch(()=>{});
+            } else {
+              await set(ref(db, `users/${target}/muted`), { by: user.username, level, time: Date.now() }).catch(()=>{});
+            }
+            await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${target} ${cmd}ned at level ${level} by ${user.username}.`, time: Date.now(), system: true });
+            return;
+          } else if (cmd === "unban" || cmd === "unmute") {
+            await remove(ref(db, scopePath));
+            // also remove from users/* quick entries
+            if (cmd === "unban") await remove(ref(db, `users/${target}/banned`)).catch(()=>{});
+            else await remove(ref(db, `users/${target}/muted`)).catch(()=>{});
+            await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${target} ${cmd}ned by ${user.username}.`, time: Date.now(), system: true });
+            return;
+          }
+        } catch (e) {
+          console.error("moderation command error", e);
+          alert("Command failed.");
+          return;
+        }
+      } // end moderation block
+
+      default:
+        await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `Unknown command: /${cmd}`, time: Date.now(), system: true });
+        return;
+    }
+  }
+
+  // Normal message: ensure not muted (global or room)
+  const gMuteSnap = await get(ref(db, `users/${user.username}/muted`));
+  if (gMuteSnap.exists()) return alert("You are muted and cannot send messages.");
+  const rMuteSnap = await get(ref(db, `rooms/${room}/muted/${user.username}`));
+  if (rMuteSnap.exists()) return alert("You are muted in this room and cannot send messages.");
+
+  await push(ref(db, `messages/${room}`), {
+    sender: user.username,
+    text,
+    time: Date.now(),
+    title: user.activeTitle || "",
+    system: false
+  });
 };
 
-window.leaveRoom=async function(){
-    const u=window.currentUser.username;
-    push(ref(db,`messages/${room}`),{sender:u,text:`[SYSTEM] ${u} has left the chat.`,system:true,time:Date.now()});
-    window.location.href="dashboard.html";
+// Leave wrapper for UI leave button
+window.leaveRoomCmd = async function() {
+  if (!window.currentUser) return;
+  await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${window.currentUser.username} has left the chat.`, time: Date.now(), system: true });
+  await remove(ref(db, `rooms/${room}/members/${window.currentUser.username}`));
+  window.location.href = "dashboard.html";
 };

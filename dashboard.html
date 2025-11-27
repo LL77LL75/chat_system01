@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
 <h2>Dashboard</h2>
+
 <button onclick="logout()">Logout</button>
 <button onclick="openAccountPopup()">Account</button>
 
@@ -15,43 +18,56 @@
 
 <!-- ACCOUNT POPUP -->
 <div id="account-popup" class="popup">
-    <div class="popup-content">
-        <h3>Account Settings</h3>
-        <label>Display Name:</label>
-        <input id="displayname-input" />
-        <button onclick="changeDisplayName()">Save Display Name</button>
-        <br><br>
-        <button onclick="changePassword()">Change Password</button>
-        <br><br>
-        <label>Active Title:</label>
-        <select id="title-select"></select>
-        <button onclick="setActiveTitle()">Equip Title</button>
-        <br><br>
-        <button onclick="createNewAccount()">Create New Account (Core+Pioneer)</button>
-        <br><br>
-        <button onclick="closeAccountPopup()">Close</button>
-    </div>
+  <div class="popup-content">
+    <h3>Account Settings</h3>
+
+    <label>Display Name:</label>
+    <input id="displayname-input" />
+
+    <button onclick="changeDisplayName()">Save Display Name</button>
+    <br><br>
+
+    <button onclick="changePassword()">Change Password</button>
+    <br><br>
+
+    <label>Active Title:</label>
+    <select id="title-select"></select>
+    <button onclick="setActiveTitle()">Equip Title</button>
+
+    <br><br>
+    <button onclick="createNewAccount()">Create New Account (core+)</button>
+
+    <br><br>
+    <button onclick="closeAccountPopup()">Close</button>
+  </div>
 </div>
 
 <script type="module">
 import { db } from "./app.js";
+
+// fill titles dropdown
 function refreshTitleList() {
-    if (!window.currentUser) return;
-    const sel = document.getElementById("title-select");
-    sel.innerHTML = "";
-    const titles = window.currentUser.titles || {};
-    Object.keys(titles).forEach(t => {
-        const opt = document.createElement("option");
-        opt.value = t;
-        opt.textContent = t;
-        sel.appendChild(opt);
-    });
-    if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
+  if (!window.currentUser) return;
+  const sel = document.getElementById("title-select");
+  sel.innerHTML = "";
+  const titles = window.currentUser.titles || {};
+  Object.keys(titles).forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    sel.appendChild(opt);
+  });
+  if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
 }
+
 window.onload = () => {
-    if (!window.currentUser) window.location.href = "index.html";
-    refreshTitleList();
-    loadRooms();
+  if (!window.currentUser) {
+    window.location.href = "index.html";
+    return;
+  }
+  refreshTitleList();
+  // loadRooms is attached by app.js
+  if (typeof loadRooms === "function") loadRooms();
 };
 </script>
 
