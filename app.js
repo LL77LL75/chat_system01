@@ -1,6 +1,6 @@
 // app.js — core application logic (CLEAN VERSION)
-// Provides: auth, user persistence, rooms list, join/leave (members add/remove), moderation helpers,
-// cleanupOldData, titles helpers. Exports db and attaches globals for inline HTML handlers.
+// Exposes: db, normalLogin, logout, loadRooms, loadRoomInfo, joinRoom, leaveRoom,
+// account/titles functions, createNewAccount, cleanupOldData, startCleanupJob
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import {
@@ -8,12 +8,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-// --- INIT FIREBASE ---
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 window.db = db;
 
-// --- UTILITIES ---
+// ---------- Utilities ----------
 const MS_15_DAYS = 15 * 24 * 60 * 60 * 1000;
 const now = () => Date.now();
 
@@ -33,7 +32,6 @@ function clearUser() {
   window.currentUser = null;
 }
 
-// role powers
 const ROLE_POWER = {
   newbie: 0,
   member: 1,
@@ -44,10 +42,9 @@ const ROLE_POWER = {
 };
 function rolePower(role) { return ROLE_POWER[role] ?? 0; }
 
-// global current user (loaded from localStorage, refreshed from DB on init)
+// ---------- Current User ----------
 window.currentUser = loadUser();
 
-// Refresh current user from DB if present
 (async function refreshCurrentUser() {
   if (!window.currentUser) return;
   try {
@@ -61,12 +58,12 @@ window.currentUser = loadUser();
   }
 })();
 
-// --- CLEANUP: remove old messages, reactions, logs older than 15 days
+// ---------- Cleanup functions ----------
 export async function cleanupOldData() {
   try {
     const cutoff = now() - MS_15_DAYS;
 
-    // 1) Messages -> messages/{room}/{msgId}
+    // Messages
     const messagesSnap = await get(ref(db, "messages"));
     if (messagesSnap.exists()) {
       messagesSnap.forEach(roomSnap => {
@@ -74,33 +71,32 @@ export async function cleanupOldData() {
         roomSnap.forEach(msgSnap => {
           const m = msgSnap.val() || {};
           const t = m.time || 0;
-          if (t < cutoff) {
+          const persist = !!m.persist;
+          if (!persist && t < cutoff) {
             remove(ref(db, `messages/${roomKey}/${msgSnap.key}`)).catch(console.warn);
-            // remove reactions under separate path too
             remove(ref(db, `reactions/${roomKey}/${msgSnap.key}`)).catch(console.warn);
           }
         });
       });
     }
 
-    // 2) Reactions (redundant safe sweep)
+    // Reactions extra sweep
     const reactionsSnap = await get(ref(db, "reactions"));
     if (reactionsSnap.exists()) {
       reactionsSnap.forEach(roomSnap => {
-        const roomKey = roomSnap.key;
         roomSnap.forEach(msgSnap => {
           msgSnap.forEach(userSnap => {
             const r = userSnap.val() || {};
             const t = r.time || 0;
             if (t < cutoff) {
-              remove(ref(db, `reactions/${roomKey}/${msgSnap.key}/${userSnap.key}`)).catch(console.warn);
+              remove(ref(db, `reactions/${roomSnap.key}/${msgSnap.key}/${userSnap.key}`)).catch(console.warn);
             }
           });
         });
       });
     }
 
-    // 3) Logs
+    // Logs
     const logsSnap = await get(ref(db, "logs"));
     if (logsSnap.exists()) {
       logsSnap.forEach(l => {
@@ -114,10 +110,16 @@ export async function cleanupOldData() {
   }
 }
 
-// run cleanup opportunistically now
-cleanupOldData().catch(console.warn);
+// Start periodic cleanup job (client-side), runs every 60 seconds
+export function startCleanupJob(intervalMs = 60000) {
+  cleanupOldData().catch(console.warn);
+  setInterval(() => {
+    cleanupOldData().catch(console.warn);
+  }, intervalMs);
+}
+startCleanupJob(); // auto-start
 
-// --- AUTHENTICATION / SESSIONS ---
+// ---------- Auth ----------
 export async function normalLogin(username, password) {
   if (!username || !password) return alert("Missing username or password.");
   const snap = await get(ref(db, `users/${username}`));
@@ -133,13 +135,8 @@ export async function normalLogin(username, password) {
 
   window.currentUser = { username, ...data };
   saveUser(window.currentUser);
-
-  // log
   await push(ref(db, "logs"), { type: "login", user: username, time: now() });
-
-  // opportunistic cleanup
-  cleanupOldData().catch(console.warn);
-
+  await cleanupOldData().catch(() => {});
   window.location.href = "dashboard.html";
 }
 window.normalLogin = normalLogin;
@@ -153,13 +150,12 @@ export function logout() {
 }
 window.logout = logout;
 
-// --- ROOM LIST & INFO (dashboard) ---
+// ---------- Rooms / Dashboard ----------
 export function loadRooms() {
   const list = document.getElementById("room-list");
   const panel = document.getElementById("room-info-panel");
   if (!list || !panel) return;
 
-  // watch rooms
   onValue(ref(db, "rooms"), (snap) => {
     list.innerHTML = "";
     snap.forEach(roomNode => {
@@ -178,16 +174,12 @@ export async function loadRoomInfo(room) {
   const panel = document.getElementById("room-info-panel");
   if (!panel) return;
 
-  // members
   const membersSnap = await get(ref(db, `rooms/${room}/members`));
   const members = [];
-  if (membersSnap.exists()) {
-    membersSnap.forEach(m => members.push(m.key));
-  }
+  if (membersSnap.exists()) membersSnap.forEach(m => members.push(m.key));
 
-  // banned & muted in room
-  const bannedInRoomSnap = await get(ref(db, `rooms/${room}/banned`));
-  const mutedInRoomSnap = await get(ref(db, `rooms/${room}/muted`));
+  const bannedSnap = await get(ref(db, `rooms/${room}/banned`));
+  const mutedSnap = await get(ref(db, `rooms/${room}/muted`));
 
   panel.innerHTML = `
     <h3>Room: ${room}</h3>
@@ -197,61 +189,42 @@ export async function loadRoomInfo(room) {
     <div id="room-moderation"></div>
   `;
 
-  const joinBtn = document.getElementById("join-room-btn");
-  joinBtn.onclick = async () => {
+  document.getElementById("join-room-btn").onclick = async () => {
     await joinRoom(room);
   };
 
-  // show banned/muted if user has admin+
   const rp = rolePower(window.currentUser?.rank);
   if (rp >= rolePower("admin")) {
     const el = document.getElementById("room-moderation");
     let html = "<h4>Room bans</h4>";
-    if (bannedInRoomSnap.exists()) {
-      bannedInRoomSnap.forEach(b => { html += `<div>${b.key} (level ${b.val().level || b.val()})</div>`; });
-    } else html += "<div>None</div>";
+    if (bannedSnap.exists()) bannedSnap.forEach(b => html += `<div>${b.key} (level ${b.val().level || b.val()})</div>`);
+    else html += "<div>None</div>";
     html += "<h4>Room mutes</h4>";
-    if (mutedInRoomSnap.exists()) {
-      mutedInRoomSnap.forEach(m => { html += `<div>${m.key} (level ${m.val().level || m.val()})</div>`; });
-    } else html += "<div>None</div>";
+    if (mutedSnap.exists()) mutedSnap.forEach(m => html += `<div>${m.key} (level ${m.val().level || m.val()})</div>`);
+    else html += "<div>None</div>";
     el.innerHTML = html;
   }
 }
 window.loadRoomInfo = loadRoomInfo;
 
-// --- JOIN / LEAVE (members add/remove) ---
+// ---------- Join / Leave (members management) ----------
 export async function joinRoom(room) {
   if (!window.currentUser) return alert("Not logged in.");
   const u = window.currentUser.username;
-
-  // Check if user is banned globally or in room
+  // check global ban under users/{u}/banned or rooms/{room}/banned/{u}
   const userBannedSnap = await get(ref(db, `users/${u}/banned`));
   if (userBannedSnap.exists()) {
     alert("You are banned and cannot join rooms.");
     return;
   }
-
   const roomBannedSnap = await get(ref(db, `rooms/${room}/banned/${u}`));
   if (roomBannedSnap.exists()) {
     alert("You are banned from this room.");
     return;
   }
-
-  // add to members
   await set(ref(db, `rooms/${room}/members/${u}`), now());
-
-  // system join message
-  await push(ref(db, `messages/${room}`), {
-    sender: "SYSTEM",
-    text: `${u} has joined the chat.`,
-    time: now(),
-    system: true
-  });
-
-  // log
+  await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${u} has joined the chat.`, time: now(), system: true, persist: false });
   await push(ref(db, "logs"), { type: "join", user: u, room, time: now() });
-
-  // navigate to chat
   window.location.href = `chat.html?room=${encodeURIComponent(room)}`;
 }
 window.joinRoom = joinRoom;
@@ -259,48 +232,29 @@ window.joinRoom = joinRoom;
 export async function leaveRoom(room) {
   if (!window.currentUser) return;
   const u = window.currentUser.username;
-
-  // remove from members
   await remove(ref(db, `rooms/${room}/members/${u}`));
-
-  // system leave message
-  await push(ref(db, `messages/${room}`), {
-    sender: "SYSTEM",
-    text: `${u} has left the chat.`,
-    time: now(),
-    system: true
-  });
-
-  // log
+  await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${u} has left the chat.`, time: now(), system: true });
   await push(ref(db, "logs"), { type: "leave", user: u, room, time: now() });
-
-  // redirect
   window.location.href = "dashboard.html";
 }
 window.leaveRoom = leaveRoom;
 
-// Remove member from any room on unload to prevent ghosts
-window.addEventListener("beforeunload", async (e) => {
+// Ensure presence removal on close for the current room(s).
+window.addEventListener("beforeunload", async () => {
   try {
-    // Attempt to remove from all rooms where user appears in rooms/*/members
     if (!window.currentUser) return;
     const username = window.currentUser.username;
     const roomsSnap = await get(ref(db, "rooms"));
     if (!roomsSnap.exists()) return;
     roomsSnap.forEach(roomSnap => {
       const room = roomSnap.key;
-      const mSnap = roomSnap.child("members");
-      if (mSnap && mSnap.val() && mSnap.child && mSnap.child(username) && mSnap.child(username).val()) {
-        // best-effort remove (no await in beforeunload)
-        remove(ref(db, `rooms/${room}/members/${username}`)).catch(() => {});
-      }
+      // best-effort remove (no await)
+      remove(ref(db, `rooms/${room}/members/${username}`)).catch(()=>{});
     });
-  } catch (err) {
-    // ignore
-  }
+  } catch (e) { /* ignore */ }
 });
 
-// --- ACCOUNT POPUP / PROFILE ---
+// ---------- Account / Titles ----------
 export function openAccountPopup() {
   const popup = document.getElementById("account-popup");
   if (!popup) return;
@@ -351,7 +305,7 @@ export async function setActiveTitle() {
 }
 window.setActiveTitle = setActiveTitle;
 
-// create user (core+)
+// Core-level account creation
 export async function createNewAccount() {
   if (!window.currentUser) return alert("Not logged in.");
   const rp = rolePower(window.currentUser.rank);
@@ -363,18 +317,13 @@ export async function createNewAccount() {
   let rank = prompt("Rank (newbie/member/admin/high/core/pioneer):", "newbie");
   if (!rank || !(rank in ROLE_POWER)) rank = "newbie";
   await set(ref(db, `users/${username}`), {
-    password,
-    displayName: username,
-    rank,
-    activeTitle: "newbie",
-    titles: { newbie: true },
-    createdAt: now()
+    password, displayName: username, rank, activeTitle: "newbie", titles: { newbie: true }, createdAt: now()
   });
   alert("Account created.");
 }
 window.createNewAccount = createNewAccount;
 
-// TITLES: give title to user
+// Give title helper
 export async function giveTitleToUser(username, titleName) {
   if (!username || !titleName) return;
   await set(ref(db, `users/${username}/titles/${titleName}`), true);

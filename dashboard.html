@@ -45,7 +45,7 @@
 <script type="module">
 import { db } from "./app.js";
 
-// fill titles dropdown
+// Fill titles dropdown
 function refreshTitleList() {
   if (!window.currentUser) return;
   const sel = document.getElementById("title-select");
@@ -66,7 +66,6 @@ window.onload = () => {
     return;
   }
   refreshTitleList();
-  // loadRooms is attached by app.js
   if (typeof loadRooms === "function") loadRooms();
 };
 </script>

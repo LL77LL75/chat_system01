@@ -19,7 +19,7 @@ const inputEl = document.getElementById("msg-input");
 
 const EMOJI_LIST = ["👍","❤️","😂","😮","😢","😡"];
 
-// When user enters page, ensure presence (if not already added)
+// Enter presence & announce join
 (async function enterPresenceAndAnnounce() {
   if (!window.currentUser) {
     window.location.href = "index.html";
@@ -28,21 +28,17 @@ const EMOJI_LIST = ["👍","❤️","😂","😮","😢","😡"];
 
   const u = window.currentUser.username;
 
-  // Check banned (global or room)
   const userBanned = (await get(ref(db, `users/${u}/banned`))).exists();
   const roomBanned = (await get(ref(db, `rooms/${room}/banned/${u}`))).exists();
   if (userBanned || roomBanned) {
     alert("You are banned and cannot enter this room.");
-    // remove any lingering presence if exists
     await remove(ref(db, `rooms/${room}/members/${u}`)).catch(()=>{});
     window.location.href = "dashboard.html";
     return;
   }
 
-  // join (set presence)
   await set(ref(db, `rooms/${room}/members/${u}`), Date.now());
 
-  // push join system message
   await push(ref(db, `messages/${room}`), {
     sender: "SYSTEM",
     text: `${u} has joined the chat.`,
@@ -50,13 +46,12 @@ const EMOJI_LIST = ["👍","❤️","😂","😮","😢","😡"];
     system: true
   });
 
-  // Ensure we remove presence on unload
   window.addEventListener("beforeunload", async () => {
     try { await remove(ref(db, `rooms/${room}/members/${u}`)); } catch {}
   });
 })().catch(console.error);
 
-// Helper: render one message with reactions and actions
+// Render message row
 async function renderMessage(msgId, m) {
   const wrapper = document.createElement("div");
   wrapper.className = "message-wrapper";
@@ -80,19 +75,16 @@ async function renderMessage(msgId, m) {
   body.textContent = m.text || "";
   wrapper.appendChild(body);
 
-  // Actions container
   const actions = document.createElement("div");
   actions.className = "msg-actions";
 
-  // Reactions: show counts and allow toggling current user's reaction per message
+  // Reactions bar
   const reactionBar = document.createElement("div");
   reactionBar.className = "reaction-bar";
 
-  // load existing reactions for this message
   const reactsSnap = await get(ref(db, `reactions/${room}/${msgId}`));
-  const counts = {}; // emoji => count
-  const userReact = null;
-  const userReacts = {}; // username -> emoji
+  const counts = {};
+  const userReacts = {};
   if (reactsSnap.exists()) {
     reactsSnap.forEach(rSnap => {
       const uname = rSnap.key;
@@ -111,16 +103,13 @@ async function renderMessage(msgId, m) {
     btn.textContent = `${emoji} ${counts[emoji] || ""}`.trim();
     if (currentUserReaction === emoji) btn.classList.add("emoji-active");
     btn.onclick = async () => {
-      // only member+ can react
       const rp = { newbie:0, member:1, admin:2, high:3, core:4, pioneer:5 }[window.currentUser.rank] || 0;
       if (rp < 1) return alert("You must be a member to react.");
       const myPath = ref(db, `reactions/${room}/${msgId}/${window.currentUser.username}`);
       const cur = await get(myPath);
       if (cur.exists() && cur.val().type === emoji) {
-        // toggle off
         await remove(myPath);
       } else {
-        // set reaction
         await set(myPath, { type: emoji, time: Date.now() });
       }
     };
@@ -129,7 +118,7 @@ async function renderMessage(msgId, m) {
 
   actions.appendChild(reactionBar);
 
-  // Delete button for message owner
+  // Delete button for owner
   if (window.currentUser.username === m.sender) {
     const del = document.createElement("button");
     del.className = "delete-btn";
@@ -149,7 +138,6 @@ async function renderMessage(msgId, m) {
 // Listen for messages
 onValue(ref(db, `messages/${room}`), async (snap) => {
   messagesEl.innerHTML = "";
-  // collect in array sorted by time
   const arr = [];
   snap.forEach(s => arr.push({ id: s.key, val: s.val() }));
   arr.sort((a,b) => (a.val.time || 0) - (b.val.time || 0));
@@ -160,29 +148,24 @@ onValue(ref(db, `messages/${room}`), async (snap) => {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }, (err) => console.warn("messages onValue error", err));
 
-// Command parsing: supports both "/cmd ..." and "?/cmd ..." per your requirement
+// Commands & send
 function normalizeCommandText(text) {
   if (text.startsWith("?/")) return "/" + text.slice(2);
   return text;
 }
-
-// parse /msg recipient "text"
 function parseMsg(rest) {
-  // expects: recipient "message"
   const match = rest.match(/^(\S+)\s+["']([\s\S]+)["']$/);
   if (!match) return null;
   return { target: match[1], text: match[2] };
 }
 
-// Send message or run command
 window.sendMessage = async function() {
   if (!window.currentUser) return alert("Not logged in.");
   const user = window.currentUser;
 
-  // check muted (global or room)
+  // Check mutes (global or room)
   const gMuteSnap = await get(ref(db, `users/${user.username}/muted`));
   if (gMuteSnap.exists()) return alert("You are muted and cannot send messages.");
-
   const rMuteSnap = await get(ref(db, `rooms/${room}/muted/${user.username}`));
   if (rMuteSnap.exists()) return alert("You are muted in this room and cannot send messages.");
 
@@ -192,7 +175,6 @@ window.sendMessage = async function() {
 
   text = normalizeCommandText(text);
 
-  // commands start with /
   if (text.startsWith("/")) {
     const m = text.match(/^\/(\w+)\s*(.*)$/s);
     if (!m) {
@@ -205,12 +187,11 @@ window.sendMessage = async function() {
     switch (cmd) {
       case "me":
         if (!rest) return alert("Usage: /me text");
-        await push(ref(db, `messages/${room}`), { sender: user.username, text: `* ${rest}`, time: Date.now(), system: false, title: user.activeTitle || "" });
+        await push(ref(db, `messages/${room}`), { sender: user.username, text: `* ${rest}`, time: Date.now(), title: user.activeTitle || "", system: false });
         return;
 
       case "title":
         if (!rest) return alert("Usage: /title NewTitle");
-        // give title to user if doesn't exist and set activeTitle
         await set(ref(db, `users/${user.username}/titles/${rest}`), true);
         await update(ref(db, `users/${user.username}`), { activeTitle: rest });
         window.currentUser.activeTitle = rest;
@@ -219,7 +200,6 @@ window.sendMessage = async function() {
         return;
 
       case "leave":
-        // send system leave and remove from members
         await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${user.username} has left the chat.`, time: Date.now(), system: true });
         await remove(ref(db, `rooms/${room}/members/${user.username}`));
         await push(ref(db, "logs"), { type: "leave", user: user.username, room, time: Date.now() });
@@ -227,26 +207,17 @@ window.sendMessage = async function() {
         return;
 
       case "help":
-        await push(ref(db, `messages/${room}`), {
-          sender: "SYSTEM",
-          text: "Commands: /me /title /leave /help /msg recipient \"text\" /ban /unban /mute /unmute /kick /rank",
-          time: Date.now(),
-          system: true
-        });
+        await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: "Commands: /me /title /leave /help /msg recipient \"text\" /ban /unban /mute /unmute /kick /rank", time: Date.now(), system: true });
         return;
 
       case "msg": {
-        // private message; member+ required
         const power = rolePower(user.rank);
         if (power < rolePower("member")) return alert("Private messages require member rank.");
         const parsed = parseMsg(rest);
         if (!parsed) return alert('Usage: /msg recipient "text"');
         const pm = { from: user.username, text: parsed.text, time: Date.now(), visibleToStaff: true };
-        // store under recipient
         await push(ref(db, `private/${parsed.target}`), pm);
-        // also store a copy under sender for outbox
         await push(ref(db, `private/${user.username}`), { ...pm, to: parsed.target });
-        // notify minimal system message into public chat (no private content)
         await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${user.username} sent a private message to ${parsed.target}. (staff may view)`, time: Date.now(), system: true });
         return;
       }
@@ -257,30 +228,23 @@ window.sendMessage = async function() {
       case "unmute":
       case "kick":
       case "rank": {
-        // moderation commands. Evaluate permissions.
         const tokens = rest.split(/\s+/).filter(Boolean);
         if (tokens.length === 0) return alert(`Usage: /${cmd} username [level/global]`);
         const target = tokens[0];
         let level = 1;
         if (tokens[1] && /^\d+$/.test(tokens[1])) level = parseInt(tokens[1], 10);
         const isGlobal = tokens.includes("global");
-
         const actorPower = rolePower(user.rank);
-        // map levels to minimum actor power required:
-        // level 1 -> admin(2), level2 -> high(3), level3 -> core(4), level4 -> pioneer(5)
         const requiredForLevel = lvl => (lvl === 1 ? 2 : lvl === 2 ? 3 : lvl === 3 ? 4 : 5);
 
         try {
-          // load target user (if needed)
           const targetSnap = await get(ref(db, `users/${target}`));
           if (!targetSnap.exists()) return alert("Target user not found.");
-
           const targetData = targetSnap.val();
 
           if (cmd === "kick") {
             if (actorPower < rolePower("admin")) return alert("Kick requires admin+.");
             if (rolePower(targetData.rank) >= actorPower) return alert("Cannot act on equal/higher rank.");
-            // remove target from room members
             await remove(ref(db, `rooms/${room}/members/${target}`));
             await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${target} was kicked by ${user.username}.`, time: Date.now(), system: true });
             return;
@@ -295,27 +259,19 @@ window.sendMessage = async function() {
             return;
           }
 
-          // For ban/mute/unban/unmute:
           const minPower = requiredForLevel(level);
           if (actorPower < minPower) return alert(`You need higher power to perform this action at level ${level}.`);
-
-          // cannot act on equal/higher rank
           if (rolePower(targetData.rank) >= actorPower) return alert("Cannot act on equal/higher rank.");
 
           const scopePath = isGlobal ? `${cmd}s/global/${target}` : `${cmd}s/room:${room}/${target}`;
           if (cmd === "ban" || cmd === "mute") {
             await set(ref(db, scopePath), { by: user.username, level, time: Date.now() });
-            // also store under users/{target}/banned or muted for quick checks
-            if (cmd === "ban") {
-              await set(ref(db, `users/${target}/banned`), { by: user.username, level, time: Date.now() }).catch(()=>{});
-            } else {
-              await set(ref(db, `users/${target}/muted`), { by: user.username, level, time: Date.now() }).catch(()=>{});
-            }
+            if (cmd === "ban") await set(ref(db, `users/${target}/banned`), { by: user.username, level, time: Date.now() }).catch(()=>{});
+            else await set(ref(db, `users/${target}/muted`), { by: user.username, level, time: Date.now() }).catch(()=>{});
             await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${target} ${cmd}ned at level ${level} by ${user.username}.`, time: Date.now(), system: true });
             return;
           } else if (cmd === "unban" || cmd === "unmute") {
             await remove(ref(db, scopePath));
-            // also remove from users/* quick entries
             if (cmd === "unban") await remove(ref(db, `users/${target}/banned`)).catch(()=>{});
             else await remove(ref(db, `users/${target}/muted`)).catch(()=>{});
             await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${target} ${cmd}ned by ${user.username}.`, time: Date.now(), system: true });
@@ -326,7 +282,7 @@ window.sendMessage = async function() {
           alert("Command failed.");
           return;
         }
-      } // end moderation block
+      }
 
       default:
         await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `Unknown command: /${cmd}`, time: Date.now(), system: true });
@@ -334,12 +290,7 @@ window.sendMessage = async function() {
     }
   }
 
-  // Normal message: ensure not muted (global or room)
-  const gMuteSnap = await get(ref(db, `users/${user.username}/muted`));
-  if (gMuteSnap.exists()) return alert("You are muted and cannot send messages.");
-  const rMuteSnap = await get(ref(db, `rooms/${room}/muted/${user.username}`));
-  if (rMuteSnap.exists()) return alert("You are muted in this room and cannot send messages.");
-
+  // Normal message
   await push(ref(db, `messages/${room}`), {
     sender: user.username,
     text,
@@ -349,7 +300,7 @@ window.sendMessage = async function() {
   });
 };
 
-// Leave wrapper for UI leave button
+// Leave wrapper
 window.leaveRoomCmd = async function() {
   if (!window.currentUser) return;
   await push(ref(db, `messages/${room}`), { sender: "SYSTEM", text: `${window.currentUser.username} has left the chat.`, time: Date.now(), system: true });
