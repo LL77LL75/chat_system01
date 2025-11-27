@@ -1,3 +1,4 @@
+// uwu
 import { db } from "./app.js";
 import { ref, get, set, push, remove, onChildAdded } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
