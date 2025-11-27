@@ -1,16 +1,13 @@
-import { 
-  db, auth,
-  ref, get, push, set, remove, onChildAdded
-} from "./firebase-config.js";
+import { db } from "./app.js";
+import { ref, get, set, push, remove, onChildAdded } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
 let room = null;
-let currentUser = null;
-window.currentUser = null;
+let currentUser = window.currentUser || null;
 
 // -------------------------------
 // INIT
 // -------------------------------
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
   // Get room from URL
   const params = new URLSearchParams(window.location.search);
   room = params.get("room");
@@ -20,20 +17,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // Load user
-  await loadCurrentUser();
+  currentUser = window.currentUser;
   if (!currentUser) {
     window.location.href = "index.html";
     return;
   }
 
-  window.currentUser = currentUser;
-
   // Set room name
   document.getElementById("roomName").innerText = room;
 
   // Join room
-  await joinRoom(currentUser.username, room);
+  joinRoom(currentUser.username, room);
 
   // Load chat messages
   loadMessages();
@@ -44,19 +38,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.key === "Enter") sendMessage();
   });
 });
-
-// -------------------------------
-// LOAD CURRENT USER
-// -------------------------------
-async function loadCurrentUser() {
-  const u = auth.currentUser;
-  if (!u) return;
-
-  const snap = await get(ref(db, `users/${u.uid}`));
-  if (!snap.exists()) return;
-
-  currentUser = snap.val();
-}
 
 // -------------------------------
 // JOIN ROOM
@@ -73,13 +54,13 @@ async function joinRoom(username, roomId) {
 }
 
 // -------------------------------
-// LEAVE ROOM  (FULLY PATCHED)
+// LEAVE ROOM
 // -------------------------------
 function leaveRoomCmd() {
-  if (!window.currentUser || !room) return;
+  if (!currentUser || !room) return;
 
   (async () => {
-    const username = window.currentUser.username;
+    const username = currentUser.username;
 
     // System leave message
     await push(ref(db, `rooms/${room}/messages`), {
@@ -89,15 +70,13 @@ function leaveRoomCmd() {
       system: true
     });
 
-    // Remove from room members
+    // Remove from members
     await remove(ref(db, `rooms/${room}/members/${username}`));
 
     // Redirect
     window.location.href = "dashboard.html";
   })();
 }
-
-// Make globally available
 window.leaveRoomCmd = leaveRoomCmd;
 
 // -------------------------------
@@ -131,6 +110,12 @@ async function sendMessage() {
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
   if (!text) return;
+
+  // Prevent muted users from sending messages
+  if (currentUser.muted) {
+    alert("You are muted and cannot send messages.");
+    return;
+  }
 
   await push(ref(db, `rooms/${room}/messages`), {
     sender: currentUser.username,
