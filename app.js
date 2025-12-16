@@ -1,4 +1,4 @@
-// app.js
+// app.js — clean modular version
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getDatabase, ref, get, set, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -43,7 +43,7 @@ export function openAccountPopup() {
     const popup = document.getElementById("account-popup");
     if (!popup) return;
     document.getElementById("displayname-input").value = currentUser?.displayName || "";
-    popup.style.display = "block";
+    popup.style.display = "flex";
 }
 window.openAccountPopup = openAccountPopup;
 
@@ -172,7 +172,7 @@ window.leaveRoom = leaveRoom;
 export function openUserList() {
     const popup = document.getElementById("user-list-panel");
     if (!popup) return;
-    popup.style.display = "block";
+    popup.style.display = "flex";
 }
 window.openUserList = openUserList;
 

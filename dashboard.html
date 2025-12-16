@@ -7,12 +7,13 @@
 </head>
 <body>
 
-<h1>Dashboard</h1>
-
-<div class="dashboard-buttons">
-  <button onclick="logout()">Logout</button>
-  <button onclick="openAccountPopup()">Account</button>
-</div>
+<header>
+  <h1>Dashboard</h1>
+  <div class="header-buttons">
+    <button onclick="logout()">Logout</button>
+    <button onclick="openAccountPopup()">Account</button>
+  </div>
+</header>
 
 <section class="rooms-section">
   <h2>Rooms</h2>
@@ -46,12 +47,12 @@
 
 <script type="module">
 import { currentUser, loadRooms } from './app.js';
+
 window.onload = () => {
     if (!currentUser) location.href = "index.html";
     loadRooms();
 };
 </script>
-
 <script type="module" src="app.js"></script>
 </body>
 </html>
