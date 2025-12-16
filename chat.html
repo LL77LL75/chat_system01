@@ -6,9 +6,13 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
 <div class="chat-header">
   <h1 id="room-title"></h1>
-  <button onclick="leaveRoom()">Leave Room</button>
+  <div class="chat-header-buttons">
+    <button onclick="leaveRoom()">Leave Room</button>
+    <button onclick="openUserList()">UsrLst</button>
+  </div>
 </div>
 
 <div id="messages" class="chat-messages"></div>
@@ -17,6 +21,14 @@
   <input type="text" id="msg-input" placeholder="Type a message...">
   <button type="submit">Send</button>
 </form>
+
+<!-- USER LIST POPUP -->
+<div id="user-list-panel" class="popup">
+  <div class="popup-content">
+    <h3>Users</h3>
+    <button onclick="closeUserList()">Close</button>
+  </div>
+</div>
 
 <script type="module" src="app.js"></script>
 <script type="module" src="chat.js"></script>

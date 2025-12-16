@@ -1,47 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Dashboard</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="dashboard-header">
-  <h1>Dashboard</h1>
-  <div class="dashboard-buttons">
-    <button onclick="logout()">Logout</button>
-    <button onclick="openAccountPopup()">Account</button>
-  </div>
-</div>
 
-<section class="rooms-section">
-  <h2>Rooms</h2>
-  <div id="room-list" class="room-list"></div>
-  <div id="room-info-panel" class="room-info-panel"></div>
-</section>
+<h2>Dashboard</h2>
 
-<!-- Account Popup -->
+<button onclick="logout()">Logout</button>
+<button onclick="openAccountPopup()">Account</button>
+
+<h3>Rooms</h3>
+<div id="room-list"></div>
+<div id="room-info-panel" class="room-panel"></div>
+
+<!-- ACCOUNT POPUP -->
 <div id="account-popup" class="popup">
   <div class="popup-content">
     <h3>Account Settings</h3>
-    <button onclick="openUserList()">UsrLst</button>
+
+    <label>Display Name:</label>
+    <input id="displayname-input" />
+
+    <button onclick="changeDisplayName()">Save Display Name</button>
+    <br><br>
+
+    <button onclick="changePassword()">Change Password</button>
+    <br><br>
+
+    <label>Active Title:</label>
+    <select id="title-select"></select>
+    <button onclick="setActiveTitle()">Equip Title</button>
+
+    <br><br>
+    <button onclick="createNewAccount()">Create New Account (core+)</button>
+
+    <br><br>
     <button onclick="closeAccountPopup()">Close</button>
   </div>
 </div>
 
-<!-- User List Popup -->
-<div id="user-list-panel" class="popup">
-  <div class="popup-content">
-    <h3>Users</h3>
-    <button onclick="closeUserList()">Close</button>
-  </div>
-</div>
-
 <script type="module">
-const app = await import("./app.js");
+import { db } from "./app.js";
 
-if (!window.currentUser) location.href = "index.html";
-else window.loadRooms();
+// Fill titles dropdown
+function refreshTitleList() {
+  if (!window.currentUser) return;
+  const sel = document.getElementById("title-select");
+  sel.innerHTML = "";
+  const titles = window.currentUser.titles || {};
+  Object.keys(titles).forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    sel.appendChild(opt);
+  });
+  if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
+}
+
+window.onload = () => {
+  if (!window.currentUser) {
+    window.location.href = "index.html";
+    return;
+  }
+  refreshTitleList();
+  if (typeof loadRooms === "function") loadRooms();
+};
 </script>
+
+<script type="module" src="app.js"></script>
 </body>
 </html>
