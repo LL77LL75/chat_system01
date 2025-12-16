@@ -1,42 +1,45 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Dashboard</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Dashboard</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h2>Dashboard</h2>
+<h1>Dashboard</h1>
 
-<button onclick="logout()">Logout</button>
-<button onclick="openAccountPopup()">Account</button>
+<div class="dashboard-buttons">
+  <button onclick="logout()">Logout</button>
+  <button onclick="openAccountPopup()">Account</button>
+</div>
 
-<h3>Rooms</h3>
-<div id="room-list"></div>
-<div id="room-info-panel" class="room-panel"></div>
+<section class="rooms-section">
+  <h2>Rooms</h2>
+  <div id="room-list" class="room-list"></div>
+  <div id="room-info-panel" class="room-info-panel">
+    <h3>Room Info</h3>
+    <div id="users-inside"><strong>Users inside:</strong></div>
+    <div id="banned-users"><strong>Banned Users:</strong></div>
+    <div id="muted-users"><strong>Muted Users:</strong></div>
+  </div>
+</section>
 
 <!-- ACCOUNT POPUP -->
 <div id="account-popup" class="popup">
   <div class="popup-content">
     <h3>Account Settings</h3>
-
     <label>Display Name:</label>
     <input id="displayname-input" />
-
     <button onclick="changeDisplayName()">Save Display Name</button>
     <br><br>
-
     <button onclick="changePassword()">Change Password</button>
     <br><br>
-
     <label>Active Title:</label>
     <select id="title-select"></select>
     <button onclick="setActiveTitle()">Equip Title</button>
-
     <br><br>
     <button onclick="createNewAccount()">Create New Account (core+)</button>
-
     <br><br>
     <button onclick="closeAccountPopup()">Close</button>
   </div>
@@ -45,9 +48,13 @@
 <script type="module">
 import { db } from "./app.js";
 
-// Fill titles dropdown
-function refreshTitleList() {
-  if (!window.currentUser) return;
+window.onload = () => {
+  if (!window.currentUser) location.href = "index.html";
+  fillTitles();
+  loadRooms(); // From app.js
+};
+
+function fillTitles() {
   const sel = document.getElementById("title-select");
   sel.innerHTML = "";
   const titles = window.currentUser.titles || {};
@@ -59,15 +66,6 @@ function refreshTitleList() {
   });
   if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
 }
-
-window.onload = () => {
-  if (!window.currentUser) {
-    window.location.href = "index.html";
-    return;
-  }
-  refreshTitleList();
-  if (typeof loadRooms === "function") loadRooms();
-};
 </script>
 
 <script type="module" src="app.js"></script>

@@ -15,12 +15,22 @@
   </div>
 </div>
 
-<div id="messages" class="chat-messages"></div>
+<div class="chat-main">
+  <div class="chat-messages-container">
+    <div id="messages" class="chat-messages"></div>
+    <form id="chat-form">
+      <input type="text" id="msg-input" placeholder="Type a message...">
+      <button type="submit">Send</button>
+    </form>
+  </div>
 
-<form id="chat-form">
-  <input type="text" id="msg-input" placeholder="Type a message...">
-  <button type="submit">Send</button>
-</form>
+  <div class="chat-info-panel">
+    <h3>Room Info</h3>
+    <div id="users-inside"><strong>Users inside:</strong></div>
+    <div id="banned-users"><strong>Banned Users:</strong></div>
+    <div id="muted-users"><strong>Muted Users:</strong></div>
+  </div>
+</div>
 
 <!-- USER LIST POPUP -->
 <div id="user-list-panel" class="popup">

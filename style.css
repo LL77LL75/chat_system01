@@ -1,113 +1,35 @@
-body {
-  font-family: Arial, sans-serif;
-  background: #f4f4f4;
-  margin: 0; padding: 0;
-}
+body { font-family: Arial; background:#f4f4f4; margin:0; padding:0; }
 
 /* Login */
-.login-container {
-  width: 300px;
-  margin: 100px auto;
-  padding: 30px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 0 10px #0003;
-  text-align: center;
-}
-.login-container input {
-  width: 90%;
-  margin: 8px 0;
-  padding: 8px;
-}
-.login-container button {
-  padding: 8px 16px;
-  cursor: pointer;
-}
+.login-box { width:300px; margin:100px auto; padding:30px; background:white; border-radius:8px; box-shadow:0 0 10px #0003; text-align:center; }
+.login-box input { width:90%; margin:8px 0; padding:8px; }
+.login-box button { padding:8px 16px; cursor:pointer; }
 
 /* Dashboard */
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 20px;
-  background: #007bff;
-  color: white;
-}
-.dashboard-buttons button {
-  margin-left: 10px;
-  padding: 6px 12px;
-  cursor: pointer;
-}
-.rooms-section {
-  padding: 20px;
-}
-.room-list button {
-  margin: 4px;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-.room-info-panel {
-  margin-top: 10px;
-  padding: 10px;
-  background: #fff;
-  border-radius: 6px;
-  box-shadow: 0 0 6px #0002;
-}
+h1,h2,h3 { margin:0 0 10px 0; }
+.dashboard-buttons { margin-bottom:10px; }
+.dashboard-buttons button { margin-right:10px; padding:6px 12px; cursor:pointer; }
+.room-list button { margin:4px; padding:8px 12px; cursor:pointer; }
+.room-info-panel, .chat-info-panel { padding:10px; background:white; border-radius:6px; box-shadow:0 0 6px #0002; margin-top:10px; }
 
 /* Chat */
-.chat-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #007bff;
-  color: white;
-  padding: 10px 20px;
-}
-.chat-messages {
-  height: 400px;
-  overflow-y: auto;
-  padding: 10px;
-  background: #fff;
-}
-.msg {
-  position: relative;
-  padding: 6px 36px 6px 6px;
-  margin-bottom: 6px;
-  background: #f1f1f1;
-  border-radius: 6px;
-}
-.msg span {
-  display: block;
-}
-.msg:hover {
-  background: #e2e2e2;
-}
-.del-btn {
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #ccc;
-  border: none;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.msg:hover .del-btn { opacity: 1; }
-.del-btn:hover { background: #aaa; }
+.chat-header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#007bff; color:white; }
+.chat-header-buttons button { margin-left:5px; padding:6px 12px; cursor:pointer; }
+.chat-main { display:flex; padding:10px; }
+.chat-messages-container { flex:2; margin-right:10px; display:flex; flex-direction:column; }
+.chat-messages { height:400px; overflow-y:auto; background:white; padding:10px; border-radius:6px; }
+.chat-messages .msg { position:relative; padding:6px 36px 6px 6px; margin-bottom:6px; background:#f1f1f1; border-radius:6px; }
+.chat-messages .msg:hover { background:#e2e2e2; }
+.chat-messages .del-btn { position:absolute; right:4px; top:50%; transform:translateY(-50%); background:#ccc; border:none; cursor:pointer; opacity:0; transition:opacity 0.2s; }
+.chat-messages .msg:hover .del-btn { opacity:1; }
+.chat-messages .del-btn:hover { background:#aaa; }
+.chat-messages form { display:flex; margin-top:5px; }
+.chat-messages input { flex:1; padding:8px; }
+.chat-messages button { padding:8px 12px; }
+
+/* Chat info panel */
+.chat-info-panel { width:250px; flex-shrink:0; background:white; padding:10px; border-radius:6px; box-shadow:0 0 6px #0002; }
 
 /* Popup */
-.popup {
-  position: fixed;
-  display: none;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: #0007;
-}
-.popup-content {
-  width: 350px;
-  margin: 100px auto;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-}
+.popup { position:fixed; display:none; top:0; left:0; width:100%; height:100%; background:#0007; }
+.popup-content { width:350px; margin:100px auto; padding:20px; background:white; border-radius:8px; }
