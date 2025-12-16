@@ -1,92 +1,156 @@
+// app.js — modular, clean version
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getDatabase, ref, get, push, update, remove, onValue } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { getDatabase, ref, get, set, push, onValue, update, remove, query, orderByChild } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
 
+// --- INIT FIREBASE ---
 const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app);
-window.db = db;
+const db = getDatabase(app);
+window.db = db; // global for debugging
 
-window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
-
-/* LOGIN */
-export async function normalLogin(u, p) {
-  const s = await get(ref(db, "users/" + u));
-  if (!s.exists()) return alert("User not found");
-  if (s.val().password !== p) return alert("Wrong password");
-  if (s.val().banned?.global) return alert("Banned");
-
-  window.currentUser = { username: u, ...s.val() };
-  localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-  location.href = "dashboard.html";
+// --- USER HANDLING ---
+export function loadUser() {
+    const u = localStorage.getItem("currentUser");
+    if (!u) return null;
+    try { return JSON.parse(u); } catch { return null; }
 }
 
-/* LOGOUT */
-window.logout = () => {
-  localStorage.removeItem("currentUser");
-  location.href = "index.html";
-};
+export function saveUser(user) {
+    localStorage.setItem("currentUser", JSON.stringify(user));
+}
 
-/* ROOMS */
-window.loadRooms = () => {
-  const list = document.getElementById("room-list");
-  if (!list) return;
-  onValue(ref(db, "rooms"), snap => {
-    list.innerHTML = "";
-    snap.forEach(r => {
-      const b = document.createElement("button");
-      b.textContent = r.key;
-      b.onclick = () => loadRoomInfo(r.key);
-      list.appendChild(b);
+export let currentUser = loadUser();
+window.currentUser = currentUser;
+
+// --- LOGIN ---
+export async function normalLogin(username, password) {
+    const userRef = ref(db, "users/" + username);
+    const snap = await get(userRef);
+    if (!snap.exists()) return alert("User not found.");
+    const data = snap.val();
+    if (data.password !== password) return alert("Wrong password.");
+
+    currentUser = { username, ...data };
+    saveUser(currentUser);
+    window.currentUser = currentUser;
+
+    push(ref(db, "logins"), { user: username, time: Date.now(), type: "login" });
+    window.location.href = "dashboard.html";
+}
+
+// --- LOGOUT ---
+export function logout() {
+    if (currentUser) {
+        push(ref(db, "logins"), { user: currentUser.username, time: Date.now(), type: "logout" });
+    }
+    localStorage.removeItem("currentUser");
+    window.location.href = "index.html";
+}
+
+// --- ROOMS ---
+export function loadRooms() {
+    const list = document.getElementById("room-list");
+    const panel = document.getElementById("room-info-panel");
+    if (!list || !panel) return;
+
+    onValue(ref(db, "rooms"), snap => {
+        list.innerHTML = "";
+        snap.forEach(roomNode => {
+            const room = roomNode.key;
+            const btn = document.createElement("button");
+            btn.textContent = room;
+            btn.className = "room-btn";
+            btn.onclick = () => loadRoomInfo(room);
+            list.appendChild(btn);
+        });
     });
-  });
-};
+}
 
-window.loadRoomInfo = r => {
-  const panel = document.getElementById("room-info-panel");
-  if (!panel) return;
-  panel.innerHTML = `<h3>${r}</h3><button onclick="joinRoom('${r}')">Join</button>`;
-};
+export function loadRoomInfo(room) {
+    const panel = document.getElementById("room-info-panel");
+    if (!panel) return;
 
-window.joinRoom = r => {
-  if (window.currentUser?.banned?.global) return alert("You are banned");
-  location.href = `chat.html?room=${r}`;
-};
+    const usersInsideDiv = document.getElementById("users-inside");
+    const bannedDiv = document.getElementById("banned-users");
+    const mutedDiv = document.getElementById("muted-users");
 
-/* ACCOUNT POPUP */
-window.openAccountPopup = () => document.getElementById("account-popup").style.display = "block";
-window.closeAccountPopup = () => document.getElementById("account-popup").style.display = "none";
-
-/* USER LIST */
-window.openUserList = async () => {
-  const p = document.getElementById("user-list-panel");
-  if (!p) return;
-  p.innerHTML = "<h3>Users</h3>";
-  const s = await get(ref(db, "users"));
-  s.forEach(u => {
-    const d = u.val();
-    const div = document.createElement("div");
-    div.textContent = `${u.key} (${d.rank})`;
-    if (d.banned?.global) div.style.color = "red";
-    else if (d.muted?.global) div.style.color = "gold";
-    p.appendChild(div);
-  });
-  p.style.display = "block";
-};
-window.closeUserList = () => document.getElementById("user-list-panel").style.display = "none";
-
-/* CLEANUP ENGINE */
-setInterval(async () => {
-  const now = Date.now();
-  const logs = await get(ref(db, "logs"));
-  logs?.forEach(l => { if (now - l.val().time > 15*86400000) remove(ref(db, "logs/"+l.key)); });
-  const rooms = await get(ref(db, "rooms"));
-  rooms?.forEach(r => {
-    r.child("messages").forEach(m => {
-      const msg = m.val();
-      if (!msg.persist && msg.system && (msg.text.includes("joined")||msg.text.includes("left")) && now - msg.time > 10*86400000)
-        remove(ref(db, `rooms/${r.key}/messages/${m.key}`));
-      else if (!msg.system && now - (msg.time || 0) > 20*86400000)
-        remove(ref(db, `rooms/${r.key}/messages/${m.key}`));
+    onValue(ref(db, `rooms/${room}/members`), snap => {
+        const members = [];
+        snap.forEach(s => members.push(s.key));
+        usersInsideDiv.innerHTML = `<strong>Users inside:</strong> ${members.join(", ")}`;
     });
-  });
-}, 60000);
+
+    onValue(ref(db, `rooms/${room}/banned`), snap => {
+        const banned = [];
+        snap.forEach(s => banned.push(s.key));
+        bannedDiv.innerHTML = `<strong>Banned Users:</strong> ${banned.map(b => `<span style="color:red">${b}</span>`).join(", ")}`;
+    });
+
+    onValue(ref(db, `rooms/${room}/muted`), snap => {
+        const muted = [];
+        snap.forEach(s => muted.push(s.key));
+        mutedDiv.innerHTML = `<strong>Muted Users:</strong> ${muted.map(m => `<span style="color:orange">${m}</span>`).join(", ")}`;
+    });
+}
+
+// --- ACCOUNT POPUP ---
+export function openAccountPopup() {
+    const popup = document.getElementById("account-popup");
+    if (!popup) return;
+    document.getElementById("displayname-input").value = currentUser?.displayName || "";
+    popup.style.display = "block";
+}
+
+export function closeAccountPopup() {
+    const popup = document.getElementById("account-popup");
+    if (!popup) return;
+    popup.style.display = "none";
+}
+
+// --- CHANGE DISPLAY NAME ---
+export async function changeDisplayName() {
+    const newName = document.getElementById("displayname-input").value.trim();
+    if (!newName) return alert("Display name cannot be empty.");
+    await update(ref(db, "users/" + currentUser.username), { displayName: newName });
+    currentUser.displayName = newName;
+    saveUser(currentUser);
+    alert("Display name updated.");
+}
+
+// --- CHANGE PASSWORD ---
+export async function changePassword() {
+    const pw = prompt("Enter new password:");
+    if (!pw) return;
+    await update(ref(db, "users/" + currentUser.username), { password: pw });
+    currentUser.password = pw;
+    saveUser(currentUser);
+    alert("Password updated.");
+}
+
+// --- ACTIVE TITLE ---
+export async function setActiveTitle() {
+    const title = document.getElementById("title-select").value;
+    await update(ref(db, "users/" + currentUser.username), { activeTitle: title });
+    currentUser.activeTitle = title;
+    saveUser(currentUser);
+    alert("Title updated.");
+}
+
+// --- CREATE NEW ACCOUNT (for core+) ---
+export async function createNewAccount() {
+    if (!currentUser) return alert("Not logged in.");
+    const rank = currentUser.rank;
+    if (!(rank === "core" || rank === "pioneer")) return alert("No permission.");
+    const username = prompt("New username:");
+    if (!username) return;
+    const password = prompt("New password:");
+    if (!password) return;
+
+    await set(ref(db, "users/" + username), {
+        password, displayName: username, rank: "newbie", credits: 0, activeTitle: "", titles: {}
+    });
+    alert("Account created!");
+}
+
+// --- EXPORT ---
+export { db, currentUser };

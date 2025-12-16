@@ -25,7 +25,6 @@
   </div>
 </section>
 
-<!-- ACCOUNT POPUP -->
 <div id="account-popup" class="popup">
   <div class="popup-content">
     <h3>Account Settings</h3>
@@ -46,26 +45,21 @@
 </div>
 
 <script type="module">
-import { db } from "./app.js";
+import { currentUser, loadRooms } from './app.js';
 
 window.onload = () => {
-  if (!window.currentUser) location.href = "index.html";
-  fillTitles();
-  loadRooms(); // From app.js
+    if (!currentUser) location.href = "index.html";
+    const sel = document.getElementById("title-select");
+    sel.innerHTML = "";
+    const titles = currentUser.titles || {};
+    Object.keys(titles).forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t; opt.textContent = t;
+        sel.appendChild(opt);
+    });
+    if (currentUser.activeTitle) sel.value = currentUser.activeTitle;
+    loadRooms();
 };
-
-function fillTitles() {
-  const sel = document.getElementById("title-select");
-  sel.innerHTML = "";
-  const titles = window.currentUser.titles || {};
-  Object.keys(titles).forEach(t => {
-    const opt = document.createElement("option");
-    opt.value = t;
-    opt.textContent = t;
-    sel.appendChild(opt);
-  });
-  if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
-}
 </script>
 
 <script type="module" src="app.js"></script>
