@@ -1,31 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Dashboard</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Dashboard</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="dashboard-header">
+  <h1>Dashboard</h1>
+  <div class="dashboard-buttons">
+    <button onclick="logout()">Logout</button>
+    <button onclick="openAccountPopup()">Account</button>
+  </div>
+</div>
 
-<h2>Dashboard</h2>
+<section class="rooms-section">
+  <h2>Rooms</h2>
+  <div id="room-list" class="room-list"></div>
+  <div id="room-info-panel" class="room-info-panel"></div>
+</section>
 
-<button onclick="logout()">Logout</button>
-<button onclick="openAccountPopup()">Account</button>
-
-<h3>Rooms</h3>
-<div id="room-list"></div>
-<div id="room-info-panel"></div>
-
-<!-- ACCOUNT POPUP -->
+<!-- Account Popup -->
 <div id="account-popup" class="popup">
   <div class="popup-content">
-    <h3>Account</h3>
+    <h3>Account Settings</h3>
     <button onclick="openUserList()">UsrLst</button>
-    <br><br>
     <button onclick="closeAccountPopup()">Close</button>
   </div>
 </div>
 
-<!-- USER LIST -->
+<!-- User List Popup -->
 <div id="user-list-panel" class="popup">
   <div class="popup-content">
     <h3>Users</h3>
@@ -34,14 +38,10 @@
 </div>
 
 <script type="module">
-  const app = await import("./app.js");
+const app = await import("./app.js");
 
-  if (!window.currentUser) {
-    location.href = "index.html";
-  } else {
-    window.loadRooms(); // ✅ now 100% safe
-  }
+if (!window.currentUser) location.href = "index.html";
+else window.loadRooms();
 </script>
-
 </body>
 </html>

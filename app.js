@@ -1,18 +1,15 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import {
-  getDatabase, ref, get, push, update, remove, onValue
-} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { getDatabase, ref, get, push, update, remove, onValue } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
 window.db = db;
 
-/* USER */
 window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 
 /* LOGIN */
-window.normalLogin = async (u, p) => {
+export async function normalLogin(u, p) {
   const s = await get(ref(db, "users/" + u));
   if (!s.exists()) return alert("User not found");
   if (s.val().password !== p) return alert("Wrong password");
@@ -21,7 +18,7 @@ window.normalLogin = async (u, p) => {
   window.currentUser = { username: u, ...s.val() };
   localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
   location.href = "dashboard.html";
-};
+}
 
 /* LOGOUT */
 window.logout = () => {
@@ -33,7 +30,6 @@ window.logout = () => {
 window.loadRooms = () => {
   const list = document.getElementById("room-list");
   if (!list) return;
-
   onValue(ref(db, "rooms"), snap => {
     list.innerHTML = "";
     snap.forEach(r => {
@@ -46,22 +42,24 @@ window.loadRooms = () => {
 };
 
 window.loadRoomInfo = r => {
-  document.getElementById("room-info-panel").innerHTML =
-    `<h3>${r}</h3><button onclick="joinRoom('${r}')">Join</button>`;
+  const panel = document.getElementById("room-info-panel");
+  if (!panel) return;
+  panel.innerHTML = `<h3>${r}</h3><button onclick="joinRoom('${r}')">Join</button>`;
 };
 
-window.joinRoom = r => location.href = `chat.html?room=${r}`;
+window.joinRoom = r => {
+  if (window.currentUser?.banned?.global) return alert("You are banned");
+  location.href = `chat.html?room=${r}`;
+};
 
-/* ACCOUNT */
-window.openAccountPopup = () =>
-  document.getElementById("account-popup").style.display = "block";
-
-window.closeAccountPopup = () =>
-  document.getElementById("account-popup").style.display = "none";
+/* ACCOUNT POPUP */
+window.openAccountPopup = () => document.getElementById("account-popup").style.display = "block";
+window.closeAccountPopup = () => document.getElementById("account-popup").style.display = "none";
 
 /* USER LIST */
 window.openUserList = async () => {
   const p = document.getElementById("user-list-panel");
+  if (!p) return;
   p.innerHTML = "<h3>Users</h3>";
   const s = await get(ref(db, "users"));
   s.forEach(u => {
@@ -74,6 +72,21 @@ window.openUserList = async () => {
   });
   p.style.display = "block";
 };
+window.closeUserList = () => document.getElementById("user-list-panel").style.display = "none";
 
-window.closeUserList = () =>
-  document.getElementById("user-list-panel").style.display = "none";
+/* CLEANUP ENGINE */
+setInterval(async () => {
+  const now = Date.now();
+  const logs = await get(ref(db, "logs"));
+  logs?.forEach(l => { if (now - l.val().time > 15*86400000) remove(ref(db, "logs/"+l.key)); });
+  const rooms = await get(ref(db, "rooms"));
+  rooms?.forEach(r => {
+    r.child("messages").forEach(m => {
+      const msg = m.val();
+      if (!msg.persist && msg.system && (msg.text.includes("joined")||msg.text.includes("left")) && now - msg.time > 10*86400000)
+        remove(ref(db, `rooms/${r.key}/messages/${m.key}`));
+      else if (!msg.system && now - (msg.time || 0) > 20*86400000)
+        remove(ref(db, `rooms/${r.key}/messages/${m.key}`));
+    });
+  });
+}, 60000);

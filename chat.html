@@ -1,24 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Chat</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Chat Room</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="chat-header">
+  <h1 id="room-title"></h1>
+  <button onclick="leaveRoom()">Leave Room</button>
+</div>
 
-<h2 id="room-title"></h2>
+<div id="messages" class="chat-messages"></div>
 
-<div id="messages"></div>
-
-<form onsubmit="event.preventDefault(); sendMessage();">
-  <input id="msg-input" placeholder="Type message...">
-  <button>Send</button>
+<form id="chat-form">
+  <input type="text" id="msg-input" placeholder="Type a message...">
+  <button type="submit">Send</button>
 </form>
-
-<button onclick="leaveRoom()">Leave Room</button>
 
 <script type="module" src="app.js"></script>
 <script type="module" src="chat.js"></script>
-
 </body>
 </html>
