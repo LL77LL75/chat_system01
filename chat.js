@@ -1,48 +1,40 @@
 import { db } from "./app.js";
-import {
-  ref, push, onChildAdded, remove
-} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { ref, push, onChildAdded, remove } from
+  "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-const params = new URLSearchParams(location.search);
-const room = params.get("room");
+const room = new URLSearchParams(location.search).get("room");
 const user = window.currentUser;
-
 const box = document.getElementById("messages");
+
 document.getElementById("roomName").textContent = room;
 
-/* =======================
-   LOAD MESSAGES
-======================= */
 onChildAdded(ref(db, `rooms/${room}/messages`), snap => {
   const m = snap.val();
-  const div = document.createElement("div");
+  const wrap = document.createElement("div");
+  wrap.className = "msg";
 
   if (m.system) {
-    div.className = "system-msg";
-    div.textContent = m.text;
+    wrap.classList.add("system-msg");
+    wrap.textContent = m.text;
   } else {
-    div.innerHTML = `<b>${m.sender}</b>: ${m.text}`;
+    wrap.innerHTML = `<span><b>${m.sender}</b>: ${m.text}</span>`;
 
     if (m.sender === user.username) {
       const del = document.createElement("button");
+      del.className = "del-btn";
       del.textContent = "🗑";
       del.onclick = () =>
         remove(ref(db, `rooms/${room}/messages/${snap.key}`));
-      div.appendChild(del);
+      wrap.appendChild(del);
     }
   }
-  box.appendChild(div);
+
+  box.appendChild(wrap);
   box.scrollTop = box.scrollHeight;
 });
 
-/* =======================
-   SEND
-======================= */
 window.sendMessage = async () => {
-  if (user.muted?.global) {
-    alert("You are muted.");
-    return;
-  }
+  if (user.muted?.global) return alert("You are muted.");
 
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
@@ -52,13 +44,9 @@ window.sendMessage = async () => {
   await push(ref(db, `rooms/${room}/messages`), {
     sender: user.username,
     text,
-    time: Date.now()
+    time: Date.now(),
+    lastSeen: user.lastSeen || Date.now()
   });
 };
 
-/* =======================
-   LEAVE
-======================= */
-window.leaveRoomCmd = () => {
-  location.href = "dashboard.html";
-};
+window.leaveRoomCmd = () => location.href = "dashboard.html";
