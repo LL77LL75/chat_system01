@@ -7,15 +7,15 @@
 </head>
 <body>
 
-<div class="chat-header">
+<header class="chat-header">
   <h1 id="room-title"></h1>
   <div class="chat-header-buttons">
     <button onclick="openAccountPopup()">Account</button>
     <button onclick="leaveRoom()">Leave Room</button>
   </div>
-</div>
+</header>
 
-<div class="chat-main">
+<main class="chat-main">
   <div class="chat-messages-container">
     <div id="messages" class="chat-messages"></div>
     <form id="chat-form">
@@ -30,9 +30,9 @@
     <div id="banned-users"><strong>Banned Users:</strong></div>
     <div id="muted-users"><strong>Muted Users:</strong></div>
   </div>
-</div>
+</main>
 
-<!-- UsrLst button bottom-right -->
+<!-- UsrLst bottom-right -->
 <button id="usrlst-btn" onclick="openUserList()" style="position:fixed; bottom:10px; right:10px;">UsrLst</button>
 
 <div id="user-list-panel" class="popup">
