@@ -46,18 +46,8 @@
 
 <script type="module">
 import { currentUser, loadRooms } from './app.js';
-
 window.onload = () => {
     if (!currentUser) location.href = "index.html";
-    const sel = document.getElementById("title-select");
-    sel.innerHTML = "";
-    const titles = currentUser.titles || {};
-    Object.keys(titles).forEach(t => {
-        const opt = document.createElement("option");
-        opt.value = t; opt.textContent = t;
-        sel.appendChild(opt);
-    });
-    if (currentUser.activeTitle) sel.value = currentUser.activeTitle;
     loadRooms();
 };
 </script>
