@@ -7,6 +7,7 @@
 <body>
 
 <h2>Dashboard</h2>
+
 <button onclick="logout()">Logout</button>
 <button onclick="openAccountPopup()">Account</button>
 
@@ -24,18 +25,23 @@
   </div>
 </div>
 
-<!-- USER LIST -->
+<!-- USER LIST POPUP -->
 <div id="user-list-panel" class="popup">
   <div class="popup-content">
     <button onclick="closeUserList()">Close</button>
   </div>
 </div>
 
-<script type="module" src="app.js"></script>
-<script>
+<!-- ✅ MODULE SCRIPT (FIXED LOAD ORDER) -->
+<script type="module">
+  import "./app.js";
+
   window.onload = () => {
-    if (!window.currentUser) location.href = "index.html";
-    loadRooms();
+    if (!window.currentUser) {
+      window.location.href = "index.html";
+      return;
+    }
+    window.loadRooms(); // ✅ now guaranteed to exist
   };
 </script>
 
