@@ -1,8 +1,6 @@
-// app.js — patched
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import {
-  getDatabase, ref, get, set, push, update, remove, onValue
+  getDatabase, ref, get, push, update, remove, onValue
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -51,17 +49,50 @@ window.logout = () => {
   location.href = "index.html";
 };
 
-/* ================= ACCOUNT POPUP (FIXED) ================= */
+/* ================= ROOMS ================= */
+window.loadRooms = () => {
+  const list = document.getElementById("room-list");
+  if (!list) return;
+
+  onValue(ref(db, "rooms"), snap => {
+    list.innerHTML = "";
+    snap.forEach(r => {
+      const btn = document.createElement("button");
+      btn.className = "room-btn";
+      btn.textContent = r.key;
+      btn.onclick = () => loadRoomInfo(r.key);
+      list.appendChild(btn);
+    });
+  });
+};
+
+window.loadRoomInfo = room => {
+  const panel = document.getElementById("room-info-panel");
+  if (!panel) return;
+
+  panel.innerHTML = `
+    <h3>Room: ${room}</h3>
+    <button onclick="joinRoom('${room}')">Join Room</button>
+  `;
+};
+
+window.joinRoom = room => {
+  if (window.currentUser?.banned?.global) {
+    alert("You are banned.");
+    return;
+  }
+  window.location.href = `chat.html?room=${room}`;
+};
+
+/* ================= ACCOUNT ================= */
 window.openAccountPopup = () => {
   const popup = document.getElementById("account-popup");
-  if (!popup) return; // ✅ prevents crash
-  popup.style.display = "block";
+  if (popup) popup.style.display = "block";
 };
 
 window.closeAccountPopup = () => {
   const popup = document.getElementById("account-popup");
-  if (!popup) return;
-  popup.style.display = "none";
+  if (popup) popup.style.display = "none";
 };
 
 /* ================= USER LIST ================= */
@@ -90,44 +121,3 @@ window.closeUserList = () => {
   const panel = document.getElementById("user-list-panel");
   if (panel) panel.style.display = "none";
 };
-
-/* ================= CLEANUP ENGINE ================= */
-setInterval(async () => {
-  const NOW = Date.now();
-  const LOG_LIMIT = 15 * 86400000;
-  const JOIN_LEAVE_LIMIT = 10 * 86400000;
-  const USER_MSG_LIMIT = 20 * 86400000;
-
-  const logs = await get(ref(db, "logs"));
-  logs?.forEach(l => {
-    if (NOW - l.val().time > LOG_LIMIT) {
-      remove(ref(db, "logs/" + l.key));
-    }
-  });
-
-  const rooms = await get(ref(db, "rooms"));
-  if (!rooms.exists()) return;
-
-  rooms.forEach(room => {
-    const roomId = room.key;
-    room.child("messages").forEach(msg => {
-      const m = msg.val();
-      if (m.persist) return;
-
-      if (
-        m.system &&
-        (m.text?.includes("has joined") || m.text?.includes("has left")) &&
-        NOW - m.time > JOIN_LEAVE_LIMIT
-      ) {
-        remove(ref(db, `rooms/${roomId}/messages/${msg.key}`));
-      }
-
-      if (!m.system) {
-        const base = Math.max(m.time || 0, m.lastSeen || 0);
-        if (NOW - base > USER_MSG_LIMIT) {
-          remove(ref(db, `rooms/${roomId}/messages/${msg.key}`));
-        }
-      }
-    });
-  });
-}, 60000);
