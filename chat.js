@@ -1,52 +1,41 @@
 import { db } from "./app.js";
-import { ref, push, onChildAdded, remove } from
+import { ref, push, onValue, remove } from
   "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
 const room = new URLSearchParams(location.search).get("room");
-const user = window.currentUser;
+document.getElementById("room-title").textContent = room;
+
 const box = document.getElementById("messages");
 
-document.getElementById("roomName").textContent = room;
+onValue(ref(db, "rooms/" + room + "/messages"), snap => {
+  box.innerHTML = "";
+  snap.forEach(m => {
+    const d = document.createElement("div");
+    d.className = "msg";
 
-onChildAdded(ref(db, `rooms/${room}/messages`), snap => {
-  const m = snap.val();
-  const wrap = document.createElement("div");
-  wrap.className = "msg";
-
-  if (m.system) {
-    wrap.classList.add("system-msg");
-    wrap.textContent = m.text;
-  } else {
-    wrap.innerHTML = `<span><b>${m.sender}</b>: ${m.text}</span>`;
-
-    if (m.sender === user.username) {
-      const del = document.createElement("button");
-      del.className = "del-btn";
-      del.textContent = "🗑";
-      del.onclick = () =>
-        remove(ref(db, `rooms/${room}/messages/${snap.key}`));
-      wrap.appendChild(del);
-    }
-  }
-
-  box.appendChild(wrap);
-  box.scrollTop = box.scrollHeight;
+    d.innerHTML = `
+      <span>${m.val().text}</span>
+      ${m.val().sender === window.currentUser.username
+        ? `<button class="del" onclick="deleteMsg('${room}','${m.key}')">🗑</button>`
+        : ""}
+    `;
+    box.appendChild(d);
+  });
 });
 
-window.sendMessage = async () => {
-  if (user.muted?.global) return alert("You are muted.");
-
-  const input = document.getElementById("chatInput");
-  const text = input.value.trim();
-  if (!text) return;
-
-  input.value = "";
-  await push(ref(db, `rooms/${room}/messages`), {
-    sender: user.username,
-    text,
-    time: Date.now(),
-    lastSeen: user.lastSeen || Date.now()
+window.sendMessage = () => {
+  const t = msg.value.trim();
+  if (!t) return;
+  push(ref(db, "rooms/" + room + "/messages"), {
+    sender: window.currentUser.username,
+    text: t,
+    time: Date.now()
   });
+  msg.value = "";
 };
 
-window.leaveRoomCmd = () => location.href = "dashboard.html";
+window.deleteMsg = (r, k) =>
+  remove(ref(db, `rooms/${r}/messages/${k}`));
+
+window.leaveRoom = () =>
+  location.href = "dashboard.html";

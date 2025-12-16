@@ -8,48 +8,28 @@ const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
 window.db = db;
 
-/* ================= USER LOAD ================= */
-function loadUser() {
-  try { return JSON.parse(localStorage.getItem("currentUser")); }
-  catch { return null; }
-}
-function saveUser(u) {
-  localStorage.setItem("currentUser", JSON.stringify(u));
-}
-window.currentUser = loadUser();
+/* USER */
+window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 
-/* ================= LOGIN ================= */
-window.normalLogin = async (username, password) => {
-  const snap = await get(ref(db, "users/" + username));
-  if (!snap.exists()) return alert("User not found.");
+/* LOGIN */
+window.normalLogin = async (u, p) => {
+  const s = await get(ref(db, "users/" + u));
+  if (!s.exists()) return alert("User not found");
+  if (s.val().password !== p) return alert("Wrong password");
+  if (s.val().banned?.global) return alert("Banned");
 
-  const u = snap.val();
-  if (u.password !== password) return alert("Wrong password.");
-  if (u.banned?.global) return alert("You are banned.");
-
-  await update(ref(db, "users/" + username), { lastSeen: Date.now() });
-
-  window.currentUser = { username, ...u };
-  saveUser(window.currentUser);
-
-  push(ref(db, "logs"), { type: "login", user: username, time: Date.now() });
+  window.currentUser = { username: u, ...s.val() };
+  localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
   location.href = "dashboard.html";
 };
 
-/* ================= LOGOUT ================= */
+/* LOGOUT */
 window.logout = () => {
-  if (window.currentUser) {
-    push(ref(db, "logs"), {
-      type: "logout",
-      user: window.currentUser.username,
-      time: Date.now()
-    });
-  }
   localStorage.removeItem("currentUser");
   location.href = "index.html";
 };
 
-/* ================= ROOMS ================= */
+/* ROOMS */
 window.loadRooms = () => {
   const list = document.getElementById("room-list");
   if (!list) return;
@@ -57,67 +37,43 @@ window.loadRooms = () => {
   onValue(ref(db, "rooms"), snap => {
     list.innerHTML = "";
     snap.forEach(r => {
-      const btn = document.createElement("button");
-      btn.className = "room-btn";
-      btn.textContent = r.key;
-      btn.onclick = () => loadRoomInfo(r.key);
-      list.appendChild(btn);
+      const b = document.createElement("button");
+      b.textContent = r.key;
+      b.onclick = () => loadRoomInfo(r.key);
+      list.appendChild(b);
     });
   });
 };
 
-window.loadRoomInfo = room => {
-  const panel = document.getElementById("room-info-panel");
-  if (!panel) return;
-
-  panel.innerHTML = `
-    <h3>Room: ${room}</h3>
-    <button onclick="joinRoom('${room}')">Join Room</button>
-  `;
+window.loadRoomInfo = r => {
+  document.getElementById("room-info-panel").innerHTML =
+    `<h3>${r}</h3><button onclick="joinRoom('${r}')">Join</button>`;
 };
 
-window.joinRoom = room => {
-  if (window.currentUser?.banned?.global) {
-    alert("You are banned.");
-    return;
-  }
-  window.location.href = `chat.html?room=${room}`;
-};
+window.joinRoom = r => location.href = `chat.html?room=${r}`;
 
-/* ================= ACCOUNT ================= */
-window.openAccountPopup = () => {
-  const popup = document.getElementById("account-popup");
-  if (popup) popup.style.display = "block";
-};
+/* ACCOUNT */
+window.openAccountPopup = () =>
+  document.getElementById("account-popup").style.display = "block";
 
-window.closeAccountPopup = () => {
-  const popup = document.getElementById("account-popup");
-  if (popup) popup.style.display = "none";
-};
+window.closeAccountPopup = () =>
+  document.getElementById("account-popup").style.display = "none";
 
-/* ================= USER LIST ================= */
+/* USER LIST */
 window.openUserList = async () => {
-  const panel = document.getElementById("user-list-panel");
-  if (!panel) return;
-
-  panel.innerHTML = "<h3>Users</h3>";
-
-  const snap = await get(ref(db, "users"));
-  snap.forEach(u => {
+  const p = document.getElementById("user-list-panel");
+  p.innerHTML = "<h3>Users</h3>";
+  const s = await get(ref(db, "users"));
+  s.forEach(u => {
     const d = u.val();
     const div = document.createElement("div");
     div.textContent = `${u.key} (${d.rank})`;
-
     if (d.banned?.global) div.style.color = "red";
     else if (d.muted?.global) div.style.color = "gold";
-
-    panel.appendChild(div);
+    p.appendChild(div);
   });
-
-  panel.style.display = "block";
+  p.style.display = "block";
 };
 
-window.closeUserList = () => {
-  const panel = document.getElementById("user-list-panel");
-  if (panel) panel.style.display = "none";
-};
+window.closeUserList = () =>
+  document.getElementById("user-list-panel").style.display = "none";

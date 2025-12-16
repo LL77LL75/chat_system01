@@ -1,31 +1,17 @@
 .msg {
+  padding: 6px;
   position: relative;
-  padding: 6px 36px 6px 6px;
-  margin-bottom: 4px;
 }
 
-.del-btn {
+.del {
   position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  border: none;
+  right: 6px;
+  top: 6px;
+  display: none;
   background: #ccc;
-  color: #333;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.2s;
+  border: none;
 }
 
-.msg:hover .del-btn {
-  opacity: 1;
-}
-
-.del-btn:hover {
-  background: #aaa;
-}
-
-.system-msg {
-  color: gray;
-  font-style: italic;
+.msg:hover .del {
+  display: inline;
 }
