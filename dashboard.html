@@ -1,125 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <h2>Dashboard</h2>
-
 <button onclick="logout()">Logout</button>
 <button onclick="openAccountPopup()">Account</button>
 
-<!-- Only admin+ can see create/delete room buttons -->
-<div id="admin-room-controls" style="margin-top:10px;">
-    <button id="createRoomBtn" style="display:none;">Create Room</button>
-    <button id="deleteRoomBtn" style="display:none;">Delete Room</button>
-</div>
-
 <h3>Rooms</h3>
 <div id="room-list"></div>
-
-<div id="room-info-panel" class="room-panel"></div>
+<div id="room-info-panel"></div>
 
 <!-- ACCOUNT POPUP -->
 <div id="account-popup" class="popup">
-    <div class="popup-content">
-        <h3>Account Settings</h3>
-
-        <label>Display Name:</label>
-        <input id="displayname-input" />
-
-        <button onclick="changeDisplayName()">Save Display Name</button>
-        <br><br>
-
-        <button onclick="changePassword()">Change Password</button>
-        <br><br>
-
-        <label>Active Title:</label>
-        <select id="title-select"></select>
-        <button onclick="setActiveTitle()">Equip Title</button>
-
-        <br><br>
-        <button onclick="createNewAccount()">Create New Account (Core+Pioneer)</button>
-
-        <br><br>
-        <button onclick="closeAccountPopup()">Close</button>
-    </div>
+  <div class="popup-content">
+    <h3>Account</h3>
+    <button onclick="openUserList()">UsrLst</button>
+    <br><br>
+    <button onclick="closeAccountPopup()">Close</button>
+  </div>
 </div>
 
-<script type="module">
-import { db } from "./app.js";
-import { ref, set, remove } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
-
-// Fill title dropdown
-function refreshTitleList() {
-    if (!window.currentUser) return;
-
-    const sel = document.getElementById("title-select");
-    sel.innerHTML = "";
-
-    const titles = window.currentUser.ownedTitles || {};
-
-    Object.keys(titles).forEach(t => {
-        const opt = document.createElement("option");
-        opt.value = t;
-        opt.textContent = t;
-        sel.appendChild(opt);
-    });
-
-    if (window.currentUser.activeTitle) {
-        sel.value = window.currentUser.activeTitle;
-    }
-}
-
-// Admin room controls
-function setupRoomButtons() {
-    const rank = window.currentUser.rank;
-    const createBtn = document.getElementById("createRoomBtn");
-    const deleteBtn = document.getElementById("deleteRoomBtn");
-
-    if (["admin","high","core","pioneer"].includes(rank)) {
-        createBtn.style.display = "inline-block";
-        deleteBtn.style.display = "inline-block";
-
-        createBtn.onclick = async () => {
-            const roomName = prompt("Enter new room name:");
-            if (!roomName) return;
-            await set(ref(db, `rooms/${roomName}/messages`), {
-                "systemInit": {
-                    sender: "SYSTEM",
-                    text: `Room ${roomName} created.`,
-                    time: Date.now(),
-                    system: true
-                }
-            });
-            alert("Room created!");
-        };
-
-        deleteBtn.onclick = async () => {
-            const roomName = prompt("Enter room name to delete:");
-            if (!roomName) return;
-            await remove(ref(db, `rooms/${roomName}`));
-            alert("Room deleted!");
-        };
-    }
-}
-
-// After page loads
-window.onload = () => {
-    if (!window.currentUser) {
-        window.location.href = "index.html";
-        return;
-    }
-
-    refreshTitleList();
-    loadRooms(); // from app.js
-    setupRoomButtons();
-};
-</script>
+<!-- USER LIST -->
+<div id="user-list-panel" class="popup">
+  <div class="popup-content">
+    <button onclick="closeUserList()">Close</button>
+  </div>
+</div>
 
 <script type="module" src="app.js"></script>
+<script>
+  window.onload = () => {
+    if (!window.currentUser) location.href = "index.html";
+    loadRooms();
+  };
+</script>
 
 </body>
 </html>
