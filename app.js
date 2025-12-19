@@ -1,10 +1,7 @@
-import { initializeApp } from
-  "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import {
   getDatabase, ref, get, set, push, onValue, remove, update
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
-
 import { firebaseConfig } from "./firebase-config.js";
 
 /* ================= INIT ================= */
@@ -67,6 +64,19 @@ window.openAccountPopup = () => {
   if (input && window.currentUser)
     input.value = window.currentUser.displayName || "";
 
+  const sel = document.getElementById("title-select");
+  if (sel && window.currentUser) {
+    sel.innerHTML = "";
+    const titles = window.currentUser.titles || {};
+    Object.keys(titles).forEach(t => {
+      const opt = document.createElement("option");
+      opt.value = t;
+      opt.textContent = t;
+      sel.appendChild(opt);
+    });
+    if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
+  }
+
   p.style.display = "block";
 };
 
@@ -78,14 +88,10 @@ window.closeAccountPopup = () => {
 window.changeDisplayName = async () => {
   const input = document.getElementById("displayname-input");
   if (!input || !window.currentUser) return;
-
   const name = input.value.trim();
   if (!name) return alert("Empty");
 
-  await update(ref(db, "users/" + window.currentUser.username), {
-    displayName: name
-  });
-
+  await update(ref(db, "users/" + window.currentUser.username), { displayName: name });
   window.currentUser.displayName = name;
   localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
 };
@@ -93,12 +99,9 @@ window.changeDisplayName = async () => {
 window.setActiveTitle = async () => {
   const sel = document.getElementById("title-select");
   if (!sel || !window.currentUser) return;
-
   const title = sel.value;
-  await update(ref(db, "users/" + window.currentUser.username), {
-    activeTitle: title
-  });
 
+  await update(ref(db, "users/" + window.currentUser.username), { activeTitle: title });
   window.currentUser.activeTitle = title;
   localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
 };
@@ -108,7 +111,6 @@ window.openUserList = () => {
   const p = document.getElementById("userlist-popup");
   if (p) p.style.display = "block";
 };
-
 window.closeUserList = () => {
   const p = document.getElementById("userlist-popup");
   if (p) p.style.display = "none";

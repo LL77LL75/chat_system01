@@ -1,67 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>Dashboard</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header class="top-bar">
-  <h2>Dashboard</h2>
+<div class="top-bar">
+  <button onclick="toggleDarkMode()">🌙 Dark Mode</button>
   <div>
-    <button onclick="toggleDarkMode()">🌙</button>
-    <button onclick="openUserList()">UsrLst</button>
-    <button onclick="openAccountPopup()">Account</button>
     <button onclick="logout()">Logout</button>
+    <button onclick="openAccountPopup()">Account</button>
+    <button onclick="openUserList()">UsrLst</button>
   </div>
-</header>
+</div>
 
-<section>
-  <h3>Rooms</h3>
-  <div id="room-list"></div>
-  <div id="room-info-panel" class="panel"></div>
-</section>
+<h2>Dashboard</h2>
+<h3>Rooms</h3>
+<div id="room-list" class="panel"></div>
+<div id="room-info-panel" class="panel"></div>
 
 <!-- ACCOUNT POPUP -->
 <div id="account-popup" class="popup">
   <div class="popup-content">
-    <h3>Account</h3>
-
-    <label>Display Name</label>
-    <input id="displayname-input">
-
-    <button onclick="changeDisplayName()">Save</button>
-    <button onclick="changePassword()">Change Password</button>
-
-    <label>Title</label>
+    <h3>Account Settings</h3>
+    <label>Display Name:</label>
+    <input id="displayname-input" />
+    <button onclick="changeDisplayName()">Save Display Name</button>
+    <br><br>
+    <label>Active Title:</label>
     <select id="title-select"></select>
-    <button onclick="setActiveTitle()">Equip</button>
-
+    <button onclick="setActiveTitle()">Equip Title</button>
+    <br><br>
     <button onclick="closeAccountPopup()">Close</button>
   </div>
 </div>
 
-<!-- USER LIST -->
+<!-- USERLIST POPUP -->
 <div id="userlist-popup" class="popup">
   <div class="popup-content">
-    <h3>Active Users</h3>
-    <div id="user-list"></div>
+    <h3>Online Users</h3>
+    <ul id="userlist"></ul>
     <button onclick="closeUserList()">Close</button>
   </div>
 </div>
 
+<script type="module" src="app.js"></script>
 <script type="module">
-import "./app.js";
-
 window.onload = () => {
   if (!window.currentUser) {
     location.href = "index.html";
     return;
   }
-  loadRooms();
+  if (typeof window.loadRooms === "function") window.loadRooms();
 };
 </script>
-
 </body>
 </html>
