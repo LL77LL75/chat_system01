@@ -12,11 +12,14 @@
 <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
 <button onclick="logout()">Logout</button>
 <button onclick="openAccountPopup()">Account</button>
-<button onclick="openUserList()">Active Users</button>
+<button onclick="openUserList()">User List</button>
 
 <h3>Rooms</h3>
 <div id="room-list"></div>
 <div id="room-info-panel" class="room-panel"></div>
+
+<!-- Banned/Muted panel -->
+<div id="banned-muted-panel" class="room-panel"></div>
 
 <!-- ACCOUNT POPUP -->
 <div id="account-popup" class="popup">
@@ -35,28 +38,31 @@
     <label>Active Title:</label>
     <select id="title-select"></select>
     <button onclick="setActiveTitle()">Equip Title</button>
-    <br><br>
 
-    <button onclick="createNewAccount()">Create New Account (core+)</button>
     <br><br>
+    <button id="create-account-btn" onclick="createNewAccount()">Create New Account (core+)</button>
 
+    <br><br>
     <button onclick="closeAccountPopup()">Close</button>
   </div>
 </div>
 
-<!-- ACTIVE USERS PANEL -->
+<!-- USER LIST POPUP -->
 <div id="user-list-panel" class="popup">
   <div class="popup-content">
-    <h3>Active Users</h3>
-    <ul id="active-users"></ul>
+    <h3>Online Users</h3>
+    <ul id="online-users"></ul>
     <button onclick="closeUserList()">Close</button>
   </div>
 </div>
 
 <script type="module">
 import { db } from "./app.js";
+import { ref, onValue } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-// Fill titles dropdown
+// -----------------
+// Account Titles Dropdown
+// -----------------
 function refreshTitleList() {
   if (!window.currentUser) return;
   const sel = document.getElementById("title-select");
@@ -71,79 +77,97 @@ function refreshTitleList() {
   if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
 }
 
-// Fill rooms list and room info
+// -----------------
+// Load Rooms
+// -----------------
 function loadRooms() {
   const list = document.getElementById("room-list");
   const panel = document.getElementById("room-info-panel");
-  if (!list || !panel) return;
+  const bannedPanel = document.getElementById("banned-muted-panel");
+  if (!list || !panel || !bannedPanel) return;
 
-  import("./app.js").then(appModule => {
-    const { db } = appModule;
-    onValue(ref(db, "rooms"), snap => {
-      list.innerHTML = "";
-      snap.forEach(roomNode => {
-        const room = roomNode.key;
-        const btn = document.createElement("button");
-        btn.className = "room-btn";
-        btn.textContent = room;
-        btn.onclick = () => loadRoomInfo(room);
-        list.appendChild(btn);
-      });
+  onValue(ref(db, "rooms"), snap => {
+    list.innerHTML = "";
+    snap.forEach(roomNode => {
+      const room = roomNode.key;
+      const btn = document.createElement("button");
+      btn.className = "room-btn";
+      btn.textContent = room;
+      btn.onclick = () => loadRoomInfo(room);
+      list.appendChild(btn);
     });
   });
 }
 
-// Room info panel with banned/muted/members
 function loadRoomInfo(room) {
   const panel = document.getElementById("room-info-panel");
-  if (!panel) return;
+  const bannedPanel = document.getElementById("banned-muted-panel");
+  if (!panel || !bannedPanel) return;
 
-  import("./app.js").then(appModule => {
-    const { db } = appModule;
+  // Members
+  onValue(ref(db, `roomMembers/${room}`), snap => {
+    let members = [];
+    snap.forEach(userSnap => members.push(userSnap.key));
+    panel.innerHTML = `
+      <h3>Room: ${room}</h3>
+      <p>Users inside:</p>
+      <ul>${members.map(u => `<li>${u}</li>`).join("")}</ul>
+      <button onclick="joinRoom('${room}')">Join Room</button>
+    `;
+  });
 
-    // Room members
-    onValue(ref(db, `roomMembers/${room}`), snap => {
-      let members = [];
-      snap.forEach(userSnap => members.push(userSnap.key));
-      panel.innerHTML = `<h3>Room: ${room}</h3>
-        <p>Users inside:</p>
-        <ul>${members.map(u => `<li>${u}</li>`).join("")}</ul>
-        <button onclick="joinRoom('${room}')">Join Room</button>`;
+  // Banned/Muted
+  onValue(ref(db, `roomBans/${room}`), snap => {
+    let bans = [];
+    snap.forEach(snap => {
+      const val = snap.val();
+      const username = snap.key;
+      const color = val.global ? "grey" : "red";
+      bans.push(`<li style="color:${color}">${username}</li>`);
     });
+    bannedPanel.innerHTML = `
+      <h4>Banned Users</h4>
+      <ul>${bans.join("")}</ul>
+    `;
+  });
 
-    // Banned users
-    onValue(ref(db, `roomBans/${room}`), snap => {
-      let banned = [];
-      snap.forEach(userSnap => banned.push(userSnap.key));
-      const bannedList = banned.map(u => `<li style="color:${snap.val()[u].global?'grey':'red'}">${u}</li>`).join("");
-      panel.innerHTML += `<p>Banned Users:</p><ul>${bannedList}</ul>`;
+  onValue(ref(db, `roomMutes/${room}`), snap => {
+    let mutes = [];
+    snap.forEach(snap => {
+      const val = snap.val();
+      const username = snap.key;
+      const color = val.global ? "grey" : "yellow";
+      mutes.push(`<li style="color:${color}">${username}</li>`);
     });
+    bannedPanel.innerHTML += `
+      <h4>Muted Users</h4>
+      <ul>${mutes.join("")}</ul>
+    `;
+  });
+}
 
-    // Muted users
-    onValue(ref(db, `roomMutes/${room}`), snap => {
-      let muted = [];
-      snap.forEach(userSnap => muted.push(userSnap.key));
-      const mutedList = muted.map(u => `<li style="color:${snap.val()[u].global?'grey':'yellow'}">${u}</li>`).join("");
-      panel.innerHTML += `<p>Muted Users:</p><ul>${mutedList}</ul>`;
+// -----------------
+// Online Users
+// -----------------
+function refreshOnlineUsers() {
+  const ul = document.getElementById("online-users");
+  if (!ul) return;
+  onValue(ref(db, "onlineUsers"), snap => {
+    ul.innerHTML = "";
+    snap.forEach(userSnap => {
+      const u = userSnap.key;
+      const status = userSnap.val().status || "offline";
+      const li = document.createElement("li");
+      li.textContent = `${u} (${status})`;
+      li.style.color = status === "offline" ? "grey" : "green";
+      ul.appendChild(li);
     });
   });
 }
 
-// Active users list
-function refreshActiveUsers() {
-  const listEl = document.getElementById("active-users");
-  listEl.innerHTML = "";
-  const allUsers = JSON.parse(localStorage.getItem("currentUserList") || "[]");
-  allUsers.forEach(u => {
-    const li = document.createElement("li");
-    li.textContent = `${u.username} (${u.rank})`;
-    if (u.banned) li.style.color = "red";
-    if (u.muted) li.style.color = "yellow";
-    listEl.appendChild(li);
-  });
-}
-
-// On page load
+// -----------------
+// On load
+// -----------------
 window.onload = () => {
   if (!window.currentUser) {
     window.location.href = "index.html";
@@ -151,11 +175,10 @@ window.onload = () => {
   }
   refreshTitleList();
   loadRooms();
-  refreshActiveUsers();
+  refreshOnlineUsers();
 };
 </script>
 
 <script type="module" src="app.js"></script>
-
 </body>
 </html>
