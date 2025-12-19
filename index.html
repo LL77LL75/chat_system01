@@ -1,12 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Chat Login</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Chat Login</title>
+<link rel="stylesheet" href="style.css">
 </head>
-<body>
-<div class="login-box">
-    <h2>Login</h2>
+<body class="centered-page">
+
+<div class="login-card">
+    <h1>Welcome Back</h1>
+    <p class="subtitle">Login to continue</p>
+
     <form id="login-form">
         <input id="user" placeholder="Username" required autocomplete="username">
         <input id="pass" type="password" placeholder="Password" required autocomplete="current-password">
@@ -15,13 +19,13 @@
 </div>
 
 <script type="module">
-import { normalLogin } from './app.js';
+import { normalLogin } from "./app.js";
 
-document.getElementById('login-form').addEventListener('submit', e => {
+document.getElementById("login-form").addEventListener("submit", e => {
     e.preventDefault();
     normalLogin(
-        document.getElementById('user').value.trim(),
-        document.getElementById('pass').value.trim()
+        document.getElementById("user").value.trim(),
+        document.getElementById("pass").value.trim()
     );
 });
 </script>
