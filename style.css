@@ -1,36 +1,16 @@
-/* Base */
 body {
   font-family: Arial, sans-serif;
-  margin: 0;
   background: #f4f4f4;
   color: #000;
+  margin:0;
+  padding:0;
 }
 
-/* ================= DARK MODE ================= */
-/* Invert EVERYTHING */
 body.dark {
-  filter: invert(1) hue-rotate(180deg);
-  background: #000;
+  background: #121212;
+  color: #eee;
 }
 
-/* Undo inversion for images/icons if needed */
-body.dark img {
-  filter: invert(1) hue-rotate(180deg);
-}
-
-/* ================= USER LIST COLORS ================= */
-/* These must NOT invert */
-.user-banned {
-  color: red !important;
-  filter: none !important;
-}
-
-.user-muted {
-  color: goldenrod !important;
-  filter: none !important;
-}
-
-/* ================= UI ================= */
 .top-bar {
   display: flex;
   justify-content: space-between;
@@ -46,6 +26,12 @@ body.dark img {
   border-radius: 6px;
 }
 
+body.dark .panel, body.dark .chat-box {
+  background: #1f1f1f;
+  color: #eee;
+}
+
+/* Popup */
 .popup {
   display: none;
   position: fixed;
@@ -61,7 +47,12 @@ body.dark img {
   border-radius: 6px;
 }
 
-/* ================= CHAT ================= */
+body.dark .popup-content {
+  background: #333;
+  color: #eee;
+}
+
+/* Chat */
 .msg {
   position: relative;
   padding: 6px;
@@ -81,7 +72,18 @@ body.dark img {
   opacity: 1;
 }
 
+/* System messages */
 .system {
   color: gray;
   font-style: italic;
+}
+
+/* Userlist special colors (not inverted) */
+.user-banned {
+  color: red !important;
+  filter: none !important;
+}
+.user-muted {
+  color: yellow !important;
+  filter: none !important;
 }
