@@ -32,6 +32,32 @@ window.logout = () => {
   location.href = "index.html";
 };
 
+/* ================= ROOMS ================= */
+window.loadRooms = () => {
+  const list = document.getElementById("room-list");
+  const panel = document.getElementById("room-info-panel");
+  if (!list || !panel) return;
+
+  onValue(ref(db, "rooms"), snap => {
+    list.innerHTML = "";
+    panel.innerHTML = "";
+
+    snap.forEach(r => {
+      const btn = document.createElement("button");
+      btn.textContent = r.key;
+      btn.onclick = () => {
+        panel.innerHTML = `
+          <h4>Room: ${r.key}</h4>
+          <button onclick="location.href='chat.html?room=${r.key}'">
+            Join Room
+          </button>
+        `;
+      };
+      list.appendChild(btn);
+    });
+  });
+};
+
 /* ================= ACCOUNT ================= */
 window.openAccountPopup = () => {
   const p = document.getElementById("account-popup");
