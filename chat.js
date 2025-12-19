@@ -212,3 +212,68 @@ window.leaveRoom = async () => {
     });
     window.location.href="dashboard.html";
 };
+// -----------------------------
+// Fix duplicate join system messages & add delete button
+// -----------------------------
+function logJoin(room, user) {
+    const msgRef = ref(db, `messages/${room}`);
+    const systemMsg = {
+        sender: "[SYSTEM]",
+        text: `${user} has joined the room.`,
+        time: Date.now(),
+        system: true
+    };
+
+    // Check last 5 messages to prevent duplicate join logs
+    get(msgRef).then(snap => {
+        let recentJoin = false;
+        snap.forEach(msgSnap => {
+            const m = msgSnap.val();
+            if (m.system && m.text === systemMsg.text) recentJoin = true;
+        });
+        if (!recentJoin) {
+            push(msgRef, systemMsg);
+        }
+    });
+}
+
+// Override joinRoom to use logJoin
+const originalJoinRoom = window.joinRoom;
+window.joinRoom = function(room) {
+    if (!window.currentUser) return alert("Not logged in.");
+    const user = window.currentUser.username;
+
+    // Record join
+    set(ref(db, `roomMembers/${room}/${user}`), true);
+    logJoin(room, user);
+
+    // Redirect to chat
+    window.location.href = "chat.html?room=" + room;
+};
+
+// -----------------------------
+// Delete button for your own messages
+// -----------------------------
+window.addDeleteButtons = function() {
+    const messages = document.querySelectorAll(".chat-msg");
+    messages.forEach(msg => {
+        const username = msg.dataset.sender;
+        if (username === window.currentUser.username && !msg.querySelector(".delete-btn")) {
+            const btn = document.createElement("button");
+            btn.textContent = "🗑️";
+            btn.className = "delete-btn";
+            btn.style.float = "right";
+            btn.style.display = "none";
+            btn.onclick = () => {
+                const msgId = msg.dataset.msgId;
+                remove(ref(db, `messages/${msg.dataset.room}/${msgId}`));
+                msg.remove();
+            };
+            msg.appendChild(btn);
+
+            // Show on hover
+            msg.addEventListener("mouseenter", () => btn.style.display = "inline");
+            msg.addEventListener("mouseleave", () => btn.style.display = "none");
+        }
+    });
+};
