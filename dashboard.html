@@ -1,42 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>Dashboard</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="top-bar">
-  <button onclick="toggleDarkMode()">🌙 Dark Mode</button>
-  <div>
-    <button onclick="logout()">Logout</button>
-    <button onclick="openAccountPopup()">Account</button>
-    <button onclick="openUserList()">UsrLst</button>
-  </div>
-</div>
-
 <h2>Dashboard</h2>
 
-<h3>Rooms</h3>
-<div id="room-list" class="panel"></div>
+<button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+<button onclick="logout()">Logout</button>
+<button onclick="openAccountPopup()">Account</button>
+<button onclick="openUserList()">Active Users</button>
 
-<div id="room-info-panel" class="panel">
-  <h4 id="current-room-title">Select a room</h4>
-  <div id="inside-users">
-    <h5>Users Inside:</h5>
-    <ul id="users-inside"></ul>
-  </div>
-  <div id="banned-users">
-    <h5>Banned Users:</h5>
-    <ul id="users-banned"></ul>
-  </div>
-  <div id="muted-users">
-    <h5>Muted Users:</h5>
-    <ul id="users-muted"></ul>
-  </div>
-  <button id="join-room-btn">Join Room</button>
-</div>
+<h3>Rooms</h3>
+<div id="room-list"></div>
+<div id="room-info-panel" class="room-panel"></div>
 
 <!-- ACCOUNT POPUP -->
 <div id="account-popup" class="popup">
@@ -45,6 +25,7 @@
 
     <label>Display Name:</label>
     <input id="displayname-input" />
+
     <button onclick="changeDisplayName()">Save Display Name</button>
     <br><br>
 
@@ -56,66 +37,125 @@
     <button onclick="setActiveTitle()">Equip Title</button>
     <br><br>
 
-    <button id="create-account-btn" onclick="createNewAccount()" style="display:none;">Create New Account (core+)</button>
+    <button onclick="createNewAccount()">Create New Account (core+)</button>
     <br><br>
 
     <button onclick="closeAccountPopup()">Close</button>
   </div>
 </div>
 
-<!-- USERLIST POPUP -->
-<div id="userlist-popup" class="popup">
+<!-- ACTIVE USERS PANEL -->
+<div id="user-list-panel" class="popup">
   <div class="popup-content">
     <h3>Active Users</h3>
-    <ul id="userlist"></ul>
+    <ul id="active-users"></ul>
     <button onclick="closeUserList()">Close</button>
   </div>
 </div>
 
-<!-- COMMAND PANEL -->
-<div id="command-panel" class="panel" style="display:none;">
-  <h3>Commands</h3>
-  <ul id="command-list"></ul>
-</div>
-
-<script type="module" src="app.js"></script>
 <script type="module">
-window.onload = () => {
-  if (!window.currentUser) location.href = "index.html";
+import { db } from "./app.js";
 
-  const rank = window.currentUser.rank;
-  if (rank === "core" || rank === "pioneer") {
-    document.getElementById("create-account-btn").style.display = "inline-block";
-  }
+// Fill titles dropdown
+function refreshTitleList() {
+  if (!window.currentUser) return;
+  const sel = document.getElementById("title-select");
+  sel.innerHTML = "";
+  const titles = window.currentUser.titles || {};
+  Object.keys(titles).forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    sel.appendChild(opt);
+  });
+  if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
+}
 
-  const commandPanel = document.getElementById("command-panel");
-  const commandList = document.getElementById("command-list");
-  const commands = [];
+// Fill rooms list and room info
+function loadRooms() {
+  const list = document.getElementById("room-list");
+  const panel = document.getElementById("room-info-panel");
+  if (!list || !panel) return;
 
-  if (["member","admin","high","core","pioneer"].includes(rank)) {
-    commands.push("?/msg [name] [text]");
-  }
-  if (["admin","high","core","pioneer"].includes(rank)) {
-    commands.push("?/ban [name] , ?/mute [name] , ?/unban [name] , ?/unmute [name] , ?/kick [name]");
-  }
-  if (["high","core","pioneer"].includes(rank)) {
-    commands.push("Global moderation commands");
-  }
-  if (rank === "pioneer") {
-    commands.push("?/rank [name] [rank]");
-  }
-
-  if (commands.length > 0) {
-    commandPanel.style.display = "block";
-    commands.forEach(c => {
-      const li = document.createElement("li");
-      li.textContent = c;
-      commandList.appendChild(li);
+  import("./app.js").then(appModule => {
+    const { db } = appModule;
+    onValue(ref(db, "rooms"), snap => {
+      list.innerHTML = "";
+      snap.forEach(roomNode => {
+        const room = roomNode.key;
+        const btn = document.createElement("button");
+        btn.className = "room-btn";
+        btn.textContent = room;
+        btn.onclick = () => loadRoomInfo(room);
+        list.appendChild(btn);
+      });
     });
-  }
+  });
+}
 
-  if (typeof window.loadRooms === "function") window.loadRooms();
+// Room info panel with banned/muted/members
+function loadRoomInfo(room) {
+  const panel = document.getElementById("room-info-panel");
+  if (!panel) return;
+
+  import("./app.js").then(appModule => {
+    const { db } = appModule;
+
+    // Room members
+    onValue(ref(db, `roomMembers/${room}`), snap => {
+      let members = [];
+      snap.forEach(userSnap => members.push(userSnap.key));
+      panel.innerHTML = `<h3>Room: ${room}</h3>
+        <p>Users inside:</p>
+        <ul>${members.map(u => `<li>${u}</li>`).join("")}</ul>
+        <button onclick="joinRoom('${room}')">Join Room</button>`;
+    });
+
+    // Banned users
+    onValue(ref(db, `roomBans/${room}`), snap => {
+      let banned = [];
+      snap.forEach(userSnap => banned.push(userSnap.key));
+      const bannedList = banned.map(u => `<li style="color:${snap.val()[u].global?'grey':'red'}">${u}</li>`).join("");
+      panel.innerHTML += `<p>Banned Users:</p><ul>${bannedList}</ul>`;
+    });
+
+    // Muted users
+    onValue(ref(db, `roomMutes/${room}`), snap => {
+      let muted = [];
+      snap.forEach(userSnap => muted.push(userSnap.key));
+      const mutedList = muted.map(u => `<li style="color:${snap.val()[u].global?'grey':'yellow'}">${u}</li>`).join("");
+      panel.innerHTML += `<p>Muted Users:</p><ul>${mutedList}</ul>`;
+    });
+  });
+}
+
+// Active users list
+function refreshActiveUsers() {
+  const listEl = document.getElementById("active-users");
+  listEl.innerHTML = "";
+  const allUsers = JSON.parse(localStorage.getItem("currentUserList") || "[]");
+  allUsers.forEach(u => {
+    const li = document.createElement("li");
+    li.textContent = `${u.username} (${u.rank})`;
+    if (u.banned) li.style.color = "red";
+    if (u.muted) li.style.color = "yellow";
+    listEl.appendChild(li);
+  });
+}
+
+// On page load
+window.onload = () => {
+  if (!window.currentUser) {
+    window.location.href = "index.html";
+    return;
+  }
+  refreshTitleList();
+  loadRooms();
+  refreshActiveUsers();
 };
 </script>
+
+<script type="module" src="app.js"></script>
+
 </body>
 </html>

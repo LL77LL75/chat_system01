@@ -8,7 +8,37 @@ document.getElementById("room-title").textContent = "Room: " + room;
 
 const msgBox = document.getElementById("messages");
 
-// Check if user is banned/muted
+// ------------------
+// ACCOUNT & USER LIST
+// ------------------
+window.openAccountPopup = function () {
+    const popup = document.getElementById("account-popup");
+    if (!popup) return;
+    document.getElementById("displayname-input").value = window.currentUser?.displayName || "";
+    popup.style.display = "block";
+};
+
+window.closeAccountPopup = function () {
+    const popup = document.getElementById("account-popup");
+    if (!popup) return;
+    popup.style.display = "none";
+};
+
+window.openUserList = function () {
+    const panel = document.getElementById("user-list-panel");
+    if (!panel) return;
+    panel.style.display = "block";
+};
+
+window.closeUserList = function () {
+    const panel = document.getElementById("user-list-panel");
+    if (!panel) return;
+    panel.style.display = "none";
+};
+
+// ------------------
+// CHECK BAN / MUTE
+// ------------------
 async function checkBanMute() {
     const u = window.currentUser.username;
     const bannedSnap = await get(ref(db, `roomBans/${room}/${u}`));
@@ -16,7 +46,9 @@ async function checkBanMute() {
     return { banned: bannedSnap.exists(), muted: mutedSnap.exists() };
 }
 
-// Record join message
+// ------------------
+// JOIN MESSAGE
+// ------------------
 async function recordJoin() {
     if (!window.currentUser) return;
     const u = window.currentUser.username;
@@ -29,7 +61,9 @@ async function recordJoin() {
     });
 }
 
-// Remove user from members on exit
+// ------------------
+// REMOVE FROM ROOM ON EXIT
+// ------------------
 window.addEventListener("beforeunload", async () => {
     if (window.currentUser) {
         const u = window.currentUser.username;
@@ -43,7 +77,9 @@ window.addEventListener("beforeunload", async () => {
     }
 });
 
-// Initialize chat
+// ------------------
+// INITIALIZE
+// ------------------
 (async () => {
     const status = await checkBanMute();
     if (status.banned) {
@@ -54,7 +90,9 @@ window.addEventListener("beforeunload", async () => {
     }
 })();
 
-// Load messages
+// ------------------
+// LOAD MESSAGES
+// ------------------
 onValue(ref(db, "messages/" + room), snap => {
     msgBox.innerHTML = "";
     snap.forEach(msgSnap => {
@@ -68,13 +106,27 @@ onValue(ref(db, "messages/" + room), snap => {
             // Delete button for own messages
             if (m.sender === window.currentUser.username) {
                 const del = document.createElement("button");
-                del.textContent = "Delete";
+                del.textContent = "✖";
                 del.className = "del-btn";
+                del.style.cssText = `
+                    float: right;
+                    background: grey;
+                    color: white;
+                    border: none;
+                    padding: 2px 5px;
+                    margin-left: 5px;
+                    cursor: pointer;
+                    display: none;
+                `;
                 del.onclick = () => remove(ref(db, `messages/${room}/${msgSnap.key}`));
                 div.appendChild(del);
+
+                // Show delete button on hover
+                div.onmouseover = () => del.style.display = "inline-block";
+                div.onmouseout = () => del.style.display = "none";
             }
 
-            // Reactions button
+            // Reaction button
             const reactBtn = document.createElement("button");
             reactBtn.textContent = "...";
             reactBtn.className = "react-btn";
@@ -97,7 +149,9 @@ onValue(ref(db, "messages/" + room), snap => {
     msgBox.scrollTop = msgBox.scrollHeight;
 });
 
-// Send message
+// ------------------
+// SEND MESSAGE
+// ------------------
 window.sendMessage = async function() {
     if (!window.currentUser) return alert("Not logged in");
     const { muted } = await checkBanMute();
@@ -143,8 +197,11 @@ window.sendMessage = async function() {
     }
 };
 
-// Leave room
+// ------------------
+// LEAVE ROOM BUTTON
+// ------------------
 window.leaveRoom = async () => {
+    if (!window.currentUser) return;
     const u = window.currentUser.username;
     await remove(ref(db, `roomMembers/${room}/${u}`));
     push(ref(db, `messages/${room}`), {
