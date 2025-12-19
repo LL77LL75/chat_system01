@@ -2,26 +2,66 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Welcome Back</title>
+  <title>Dashboard</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="centered">
+<body>
 
-<h1>Welcome Back</h1>
-<p>Login to continue</p>
+<header class="top-bar">
+  <h2>Dashboard</h2>
+  <div>
+    <button onclick="toggleDarkMode()">🌙</button>
+    <button onclick="openUserList()">UsrLst</button>
+    <button onclick="openAccountPopup()">Account</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+</header>
 
-<form class="login-form" onsubmit="
-  event.preventDefault();
-  normalLogin(
-    document.getElementById('user').value.trim(),
-    document.getElementById('pass').value.trim()
-  );
-">
-  <input id="user" placeholder="Username" required autocomplete="username">
-  <input id="pass" type="password" placeholder="Password" required autocomplete="current-password">
-  <button type="submit">Login</button>
-</form>
+<section>
+  <h3>Rooms</h3>
+  <div id="room-list"></div>
+  <div id="room-info-panel" class="panel"></div>
+</section>
 
-<script type="module" src="app.js"></script>
+<!-- ACCOUNT POPUP -->
+<div id="account-popup" class="popup">
+  <div class="popup-content">
+    <h3>Account</h3>
+
+    <label>Display Name</label>
+    <input id="displayname-input">
+
+    <button onclick="changeDisplayName()">Save</button>
+    <button onclick="changePassword()">Change Password</button>
+
+    <label>Title</label>
+    <select id="title-select"></select>
+    <button onclick="setActiveTitle()">Equip</button>
+
+    <button onclick="closeAccountPopup()">Close</button>
+  </div>
+</div>
+
+<!-- USER LIST -->
+<div id="userlist-popup" class="popup">
+  <div class="popup-content">
+    <h3>Active Users</h3>
+    <div id="user-list"></div>
+    <button onclick="closeUserList()">Close</button>
+  </div>
+</div>
+
+<script type="module">
+import "./app.js";
+
+window.onload = () => {
+  if (!window.currentUser) {
+    location.href = "index.html";
+    return;
+  }
+  loadRooms();
+};
+</script>
+
 </body>
 </html>
