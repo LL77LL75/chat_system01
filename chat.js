@@ -1,6 +1,7 @@
 import { db } from "./app.js";
-import { ref, push, onValue, remove } from
-  "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import {
+  ref, push, onValue, remove
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
 const params = new URLSearchParams(location.search);
 const room = params.get("room");
@@ -10,28 +11,59 @@ if (title) title.textContent = "Room: " + room;
 
 const box = document.getElementById("messages");
 
+/* ================= LOAD ================= */
 onValue(ref(db, "messages/" + room), snap => {
   if (!box) return;
-
   box.innerHTML = "";
+
   snap.forEach(m => {
-    const d = document.createElement("div");
     const msg = m.val();
-    d.textContent = msg.text;
-    d.className = msg.system ? "system" : "user";
-    box.appendChild(d);
+    const div = document.createElement("div");
+    div.className = "msg";
+
+    const label = document.createElement("span");
+    label.className = "msg-label";
+
+    if (!msg.system) {
+      const t = msg.title ? `[${msg.title}] ` : "";
+      label.textContent = `${t}${msg.sender}: `;
+    }
+
+    const text = document.createElement("span");
+    text.textContent = msg.text;
+
+    div.appendChild(label);
+    div.appendChild(text);
+
+    // DELETE BUTTON (OWN MSG ONLY)
+    if (
+      !msg.system &&
+      window.currentUser &&
+      msg.sender === window.currentUser.username
+    ) {
+      const del = document.createElement("button");
+      del.textContent = "🗑";
+      del.className = "del-btn";
+      del.onclick = () =>
+        remove(ref(db, `messages/${room}/${m.key}`));
+
+      div.appendChild(del);
+    }
+
+    box.appendChild(div);
   });
+
   box.scrollTop = box.scrollHeight;
 });
 
-window.sendMessage = function () {
-  if (!window.currentUser) return;
-
+/* ================= SEND ================= */
+window.sendMessage = () => {
   const input = document.getElementById("msg-input");
-  if (!input || !input.value.trim()) return;
+  if (!input || !input.value.trim() || !window.currentUser) return;
 
   push(ref(db, "messages/" + room), {
     sender: window.currentUser.username,
+    title: window.currentUser.activeTitle || "",
     text: input.value.trim(),
     time: Date.now()
   });
@@ -39,9 +71,7 @@ window.sendMessage = function () {
   input.value = "";
 };
 
-window.leaveRoom = async function () {
-  if (!window.currentUser) return;
-
-  await remove(ref(db, `members/${room}/${window.currentUser.username}`));
+/* ================= LEAVE ================= */
+window.leaveRoom = async () => {
   location.href = "dashboard.html";
 };

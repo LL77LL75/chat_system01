@@ -1,209 +1,94 @@
-// app.js — SAFE GLOBAL CONTROLLER (NULL-SAFE, NO DUPLICATE EXPORTS)
+import { initializeApp } from
+  "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import {
-  getDatabase,
-  ref,
-  get,
-  set,
-  push,
-  onValue,
-  update,
-  remove,
-  onDisconnect
+  getDatabase, ref, get, set, push, onValue, remove, update
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
 import { firebaseConfig } from "./firebase-config.js";
 
-/* ============================================================
-   INIT
-============================================================ */
+/* ================= INIT ================= */
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-export { db };
+export const db = getDatabase(app);
 
-/* ============================================================
-   SAFE DOM HELPER
-============================================================ */
-function $(id) {
-  return document.getElementById(id);
-}
+window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 
-/* ============================================================
-   USER LOAD / SAVE
-============================================================ */
-function loadUser() {
-  try {
-    return JSON.parse(localStorage.getItem("currentUser"));
-  } catch {
-    return null;
-  }
-}
-
-function saveUser(user) {
-  localStorage.setItem("currentUser", JSON.stringify(user));
-}
-
-let currentUser = loadUser();
-window.currentUser = currentUser;
-
-/* ============================================================
-   LOGIN
-============================================================ */
-window.normalLogin = async function (username, password) {
+/* ================= LOGIN ================= */
+window.normalLogin = async (username, password) => {
   const snap = await get(ref(db, "users/" + username));
   if (!snap.exists()) return alert("User not found");
 
-  const data = snap.val();
-  if (data.password !== password) return alert("Wrong password");
+  const u = snap.val();
+  if (u.password !== password) return alert("Wrong password");
 
-  currentUser = { username, ...data };
-  window.currentUser = currentUser;
-  saveUser(currentUser);
-
-  // Presence (online)
-  const pRef = ref(db, "presence/" + username);
-  await set(pRef, { online: true, time: Date.now() });
-  onDisconnect(pRef).remove();
-
-  push(ref(db, "logs"), {
-    type: "login",
-    user: username,
-    time: Date.now()
-  });
-
-  window.location.href = "dashboard.html";
+  window.currentUser = { username, ...u };
+  localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+  location.href = "dashboard.html";
 };
 
-/* ============================================================
-   LOGOUT
-============================================================ */
-window.logout = async function () {
-  if (currentUser) {
-    await remove(ref(db, "presence/" + currentUser.username));
-    push(ref(db, "logs"), {
-      type: "logout",
-      user: currentUser.username,
-      time: Date.now()
-    });
-  }
+/* ================= LOGOUT ================= */
+window.logout = () => {
   localStorage.removeItem("currentUser");
-  window.location.href = "index.html";
+  location.href = "index.html";
 };
 
-/* ============================================================
-   ROOMS LIST (DASHBOARD ONLY)
-============================================================ */
-window.loadRooms = function () {
-  const list = $("room-list");
-  if (!list) return;
+/* ================= ACCOUNT ================= */
+window.openAccountPopup = () => {
+  const p = document.getElementById("account-popup");
+  if (!p) return;
 
-  onValue(ref(db, "rooms"), snap => {
-    if (!list) return;
-    list.innerHTML = "";
+  const input = document.getElementById("displayname-input");
+  if (input && window.currentUser)
+    input.value = window.currentUser.displayName || "";
 
-    snap.forEach(r => {
-      const btn = document.createElement("button");
-      btn.textContent = r.key;
-      btn.onclick = () => loadRoomInfo(r.key);
-      list.appendChild(btn);
-    });
-  });
+  p.style.display = "block";
 };
 
-window.loadRoomInfo = function (room) {
-  const panel = $("room-info-panel");
-  if (!panel) return;
-
-  onValue(ref(db, "members/" + room), snap => {
-    if (!panel) return;
-
-    const users = [];
-    snap.forEach(u => users.push(u.key));
-
-    panel.innerHTML = `
-      <h3>Room: ${room}</h3>
-      <b>Users inside:</b>
-      <ul>${users.map(u => `<li>${u}</li>`).join("")}</ul>
-      <button onclick="joinRoom('${room}')">Join</button>
-    `;
-  });
+window.closeAccountPopup = () => {
+  const p = document.getElementById("account-popup");
+  if (p) p.style.display = "none";
 };
 
-window.joinRoom = async function (room) {
-  if (!currentUser) return;
-
-  const mRef = ref(db, `members/${room}/${currentUser.username}`);
-  await set(mRef, true);
-  onDisconnect(mRef).remove();
-
-  push(ref(db, `messages/${room}`), {
-    system: true,
-    text: `${currentUser.username} has joined the chat.`,
-    time: Date.now()
-  });
-
-  window.location.href = `chat.html?room=${room}`;
-};
-
-/* ============================================================
-   ACCOUNT POPUP (SAFE)
-============================================================ */
-window.openAccountPopup = function () {
-  const popup = $("account-popup");
-  const input = $("displayname-input");
-  if (!popup || !input) return;
-
-  input.value = currentUser?.displayName || "";
-  popup.style.display = "block";
-};
-
-window.closeAccountPopup = function () {
-  const popup = $("account-popup");
-  if (!popup) return;
-  popup.style.display = "none";
-};
-
-window.changeDisplayName = async function () {
-  const input = $("displayname-input");
-  if (!input) return;
+window.changeDisplayName = async () => {
+  const input = document.getElementById("displayname-input");
+  if (!input || !window.currentUser) return;
 
   const name = input.value.trim();
-  if (!name) return alert("Empty name");
+  if (!name) return alert("Empty");
 
-  await update(ref(db, "users/" + currentUser.username), {
+  await update(ref(db, "users/" + window.currentUser.username), {
     displayName: name
   });
 
-  currentUser.displayName = name;
-  saveUser(currentUser);
-  alert("Updated");
+  window.currentUser.displayName = name;
+  localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
 };
 
-window.changePassword = async function () {
-  const pw = prompt("New password:");
-  if (!pw) return;
+window.setActiveTitle = async () => {
+  const sel = document.getElementById("title-select");
+  if (!sel || !window.currentUser) return;
 
-  await update(ref(db, "users/" + currentUser.username), {
-    password: pw
+  const title = sel.value;
+  await update(ref(db, "users/" + window.currentUser.username), {
+    activeTitle: title
   });
 
-  currentUser.password = pw;
-  saveUser(currentUser);
-  alert("Password changed");
+  window.currentUser.activeTitle = title;
+  localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
 };
 
-/* ============================================================
-   ACTIVE USERS LIST (NULL SAFE)
-============================================================ */
-onValue(ref(db, "presence"), snap => {
-  const list = $("user-list");
-  if (!list) return;
+/* ================= USER LIST ================= */
+window.openUserList = () => {
+  const p = document.getElementById("userlist-popup");
+  if (p) p.style.display = "block";
+};
 
-  list.innerHTML = "";
-  snap.forEach(u => {
-    const div = document.createElement("div");
-    div.textContent = u.key;
-    list.appendChild(div);
-  });
-});
+window.closeUserList = () => {
+  const p = document.getElementById("userlist-popup");
+  if (p) p.style.display = "none";
+};
+
+/* ================= DARK MODE ================= */
+window.toggleDarkMode = () => {
+  document.body.classList.toggle("dark");
+};
