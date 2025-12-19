@@ -135,3 +135,4 @@ window.createNewAccount = async () => {
   await set(ref(db, `users/${username}`), { password, displayName:username, rank, credits:0, activeTitle:"", titles:{} });
   alert("Account created!");
 };
+window.joinRoom = joinRoom;
