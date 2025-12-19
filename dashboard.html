@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>Dashboard</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8" />
+<title>Dashboard</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -40,7 +40,7 @@
 <!-- USERLIST POPUP -->
 <div id="userlist-popup" class="popup">
   <div class="popup-content">
-    <h3>Online Users</h3>
+    <h3>Active Users</h3>
     <ul id="userlist"></ul>
     <button onclick="closeUserList()">Close</button>
   </div>
@@ -54,6 +54,22 @@ window.onload = () => {
     return;
   }
   if (typeof window.loadRooms === "function") window.loadRooms();
+
+  // Load active users
+  const userlistEl = document.getElementById("userlist");
+  const usersRef = firebase.database().ref("users");
+  onValue(usersRef, snap => {
+    userlistEl.innerHTML = "";
+    snap.forEach(uSnap => {
+      const u = uSnap.key;
+      const data = uSnap.val();
+      const li = document.createElement("li");
+      li.textContent = `${u} (${data.rank || "newbie"})`;
+      if (data.banned) li.classList.add("user-banned");
+      if (data.muted) li.classList.add("user-muted");
+      userlistEl.appendChild(li);
+    });
+  });
 };
 </script>
 </body>
