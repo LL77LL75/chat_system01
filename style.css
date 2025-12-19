@@ -1,29 +1,55 @@
-/* DARK MODE */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #f4f4f4;
+}
+
 body.dark {
   background: #121212;
   color: #eee;
 }
 
-body.dark .info-card,
-body.dark .popup-content,
-body.dark .login-card {
-  background: #1e1e1e;
-  color: #eee;
+.centered {
+  text-align: center;
+  padding-top: 100px;
 }
 
-body.dark button {
-  background: #333;
+.login-form input {
+  margin: 5px;
+  padding: 8px;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background: #222;
   color: white;
 }
 
-/* USER LIST */
-.user-row {
-  padding: 6px;
-  margin-bottom: 4px;
-  border-radius: 4px;
+.panel, .chat-box {
+  background: white;
+  margin: 10px;
+  padding: 10px;
+  border-radius: 6px;
 }
 
-.user-row.online::before {
-  content: "● ";
-  color: #3fd46d;
+.popup {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #0008;
+}
+
+.popup-content {
+  background: white;
+  width: 300px;
+  padding: 20px;
+  margin: 100px auto;
+  border-radius: 6px;
+}
+
+.system {
+  color: gray;
+  font-style: italic;
 }
