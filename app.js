@@ -135,4 +135,18 @@ window.createNewAccount = async () => {
   await set(ref(db, `users/${username}`), { password, displayName:username, rank, credits:0, activeTitle:"", titles:{} });
   alert("Account created!");
 };
-window.joinRoom = joinRoom;
+window.joinRoom = function(room) {
+    if (!window.currentUser) return alert("Not logged in.");
+
+    const user = window.currentUser.username;
+    set(ref(db, `roomMembers/${room}/${user}`), true);
+
+    push(ref(db, `messages/${room}`), {
+        sender: user,
+        text: `[SYSTEM] ${user} has joined.`,
+        time: Date.now(),
+        system: true
+    });
+
+    window.location.href = "chat.html?room=" + room;
+};
