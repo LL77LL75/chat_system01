@@ -7,26 +7,18 @@
 </head>
 <body>
 
-<h2 id="room-title">Room</h2>
+<div class="chat-top-bar">
+  <h2 id="room-title">Room</h2>
+  <button onclick="openAccountPopup()">Account</button>
+  <button onclick="openUserList()">UsrLst</button>
+</div>
 
 <div id="messages" class="chat-box"></div>
 
-<form id="msg-form">
-  <input id="msg-input" placeholder="Type message..." autocomplete="off" />
+<form onsubmit="event.preventDefault(); sendMessage();">
+  <input id="msg-input" placeholder="Type message..." autocomplete="off"/>
   <button type="submit">Send</button>
 </form>
-
-<button onclick="leaveRoom()">Leave Room</button>
-<button id="usrlst-btn" onclick="openUserList()">UsrLst</button>
-
-<!-- USERLIST POPUP -->
-<div id="userlist-popup" class="popup">
-  <div class="popup-content">
-    <h3>Active Users</h3>
-    <ul id="userlist"></ul>
-    <button onclick="closeUserList()">Close</button>
-  </div>
-</div>
 
 <script type="module" src="chat.js"></script>
 <script type="module" src="app.js"></script>

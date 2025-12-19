@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8" />
+<meta charset="utf-8">
 <title>Dashboard</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -17,22 +17,48 @@
 </div>
 
 <h2>Dashboard</h2>
+
 <h3>Rooms</h3>
 <div id="room-list" class="panel"></div>
-<div id="room-info-panel" class="panel"></div>
+
+<div id="room-info-panel" class="panel">
+  <h4 id="current-room-title">Select a room</h4>
+  <div id="inside-users">
+    <h5>Users Inside:</h5>
+    <ul id="users-inside"></ul>
+  </div>
+  <div id="banned-users">
+    <h5>Banned Users:</h5>
+    <ul id="users-banned"></ul>
+  </div>
+  <div id="muted-users">
+    <h5>Muted Users:</h5>
+    <ul id="users-muted"></ul>
+  </div>
+  <button id="join-room-btn">Join Room</button>
+</div>
 
 <!-- ACCOUNT POPUP -->
 <div id="account-popup" class="popup">
   <div class="popup-content">
     <h3>Account Settings</h3>
+
     <label>Display Name:</label>
     <input id="displayname-input" />
     <button onclick="changeDisplayName()">Save Display Name</button>
     <br><br>
+
+    <button onclick="changePassword()">Change Password</button>
+    <br><br>
+
     <label>Active Title:</label>
     <select id="title-select"></select>
     <button onclick="setActiveTitle()">Equip Title</button>
     <br><br>
+
+    <button id="create-account-btn" onclick="createNewAccount()" style="display:none;">Create New Account (core+)</button>
+    <br><br>
+
     <button onclick="closeAccountPopup()">Close</button>
   </div>
 </div>
@@ -46,30 +72,49 @@
   </div>
 </div>
 
+<!-- COMMAND PANEL -->
+<div id="command-panel" class="panel" style="display:none;">
+  <h3>Commands</h3>
+  <ul id="command-list"></ul>
+</div>
+
 <script type="module" src="app.js"></script>
 <script type="module">
 window.onload = () => {
-  if (!window.currentUser) {
-    location.href = "index.html";
-    return;
-  }
-  if (typeof window.loadRooms === "function") window.loadRooms();
+  if (!window.currentUser) location.href = "index.html";
 
-  // Load active users
-  const userlistEl = document.getElementById("userlist");
-  const usersRef = firebase.database().ref("users");
-  onValue(usersRef, snap => {
-    userlistEl.innerHTML = "";
-    snap.forEach(uSnap => {
-      const u = uSnap.key;
-      const data = uSnap.val();
+  const rank = window.currentUser.rank;
+  if (rank === "core" || rank === "pioneer") {
+    document.getElementById("create-account-btn").style.display = "inline-block";
+  }
+
+  const commandPanel = document.getElementById("command-panel");
+  const commandList = document.getElementById("command-list");
+  const commands = [];
+
+  if (["member","admin","high","core","pioneer"].includes(rank)) {
+    commands.push("?/msg [name] [text]");
+  }
+  if (["admin","high","core","pioneer"].includes(rank)) {
+    commands.push("?/ban [name] , ?/mute [name] , ?/unban [name] , ?/unmute [name] , ?/kick [name]");
+  }
+  if (["high","core","pioneer"].includes(rank)) {
+    commands.push("Global moderation commands");
+  }
+  if (rank === "pioneer") {
+    commands.push("?/rank [name] [rank]");
+  }
+
+  if (commands.length > 0) {
+    commandPanel.style.display = "block";
+    commands.forEach(c => {
       const li = document.createElement("li");
-      li.textContent = `${u} (${data.rank || "newbie"})`;
-      if (data.banned) li.classList.add("user-banned");
-      if (data.muted) li.classList.add("user-muted");
-      userlistEl.appendChild(li);
+      li.textContent = c;
+      commandList.appendChild(li);
     });
-  });
+  }
+
+  if (typeof window.loadRooms === "function") window.loadRooms();
 };
 </script>
 </body>
