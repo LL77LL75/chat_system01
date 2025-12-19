@@ -1,7 +1,5 @@
 import { db } from "./app.js";
 import { ref, push, set, onValue, remove, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
-import { db } from "./app.js";
-import { ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
 // Parse room from URL
 const params = new URLSearchParams(window.location.search);
