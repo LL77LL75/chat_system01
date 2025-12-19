@@ -1,18 +1,27 @@
-<header class="top-bar">
-  <h1>Dashboard</h1>
-  <div class="top-actions">
-    <button onclick="toggleDarkMode()">🌙</button>
-    <button onclick="openUserList()">UsrLst</button>
-    <button onclick="openAccountPopup()">Account</button>
-    <button class="danger" onclick="logout()">Logout</button>
-  </div>
-</header>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Welcome Back</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="centered">
 
-<!-- USER LIST -->
-<div id="user-list-panel" class="popup">
-  <div class="popup-content">
-    <h3>Active Users</h3>
-    <div id="user-list"></div>
-    <button onclick="closeUserList()">Close</button>
-  </div>
-</div>
+<h1>Welcome Back</h1>
+<p>Login to continue</p>
+
+<form class="login-form" onsubmit="
+  event.preventDefault();
+  normalLogin(
+    document.getElementById('user').value.trim(),
+    document.getElementById('pass').value.trim()
+  );
+">
+  <input id="user" placeholder="Username" required autocomplete="username">
+  <input id="pass" type="password" placeholder="Password" required autocomplete="current-password">
+  <button type="submit">Login</button>
+</form>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
