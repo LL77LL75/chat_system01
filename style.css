@@ -53,3 +53,21 @@ body.dark {
   color: gray;
   font-style: italic;
 }
+.msg {
+  position: relative;
+  padding: 6px;
+}
+
+.del-btn {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  opacity: 0;
+  background: #ccc;
+  border: none;
+  cursor: pointer;
+}
+
+.msg:hover .del-btn {
+  opacity: 1;
+}
