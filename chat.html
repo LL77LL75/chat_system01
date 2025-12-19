@@ -1,48 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Chat Room</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <title>Chat</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header class="chat-header">
-  <h1 id="room-title"></h1>
-  <div class="chat-header-buttons">
+<header class="top-bar">
+  <h3 id="room-title"></h3>
+  <div>
     <button onclick="openAccountPopup()">Account</button>
     <button onclick="leaveRoom()">Leave Room</button>
   </div>
 </header>
 
-<main class="chat-main">
-  <div class="chat-messages-container">
-    <div id="messages" class="chat-messages"></div>
-    <form id="chat-form">
-      <input type="text" id="msg-input" placeholder="Type a message...">
-      <button type="submit">Send</button>
-    </form>
-  </div>
+<div id="messages" class="chat-box"></div>
 
-  <div class="chat-info-panel">
-    <h3>Room Info</h3>
-    <div id="users-inside"><strong>Users inside:</strong></div>
-    <div id="banned-users"><strong>Banned Users:</strong></div>
-    <div id="muted-users"><strong>Muted Users:</strong></div>
-  </div>
-</main>
+<form class="chat-input" onsubmit="event.preventDefault(); sendMessage();">
+  <input id="msg-input" placeholder="Type a message…">
+  <button>Send</button>
+</form>
 
-<!-- UsrLst bottom-right -->
-<button id="usrlst-btn" onclick="openUserList()" style="position:fixed; bottom:10px; right:10px;">UsrLst</button>
-
-<div id="user-list-panel" class="popup">
-  <div class="popup-content">
-    <h3>Users</h3>
-    <button onclick="closeUserList()">Close</button>
-  </div>
-</div>
-
-<script type="module" src="app.js"></script>
 <script type="module" src="chat.js"></script>
+<script type="module" src="app.js"></script>
+
 </body>
 </html>
