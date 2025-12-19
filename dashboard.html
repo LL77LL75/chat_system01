@@ -1,77 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Dashboard</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-
 <header class="top-bar">
   <h1>Dashboard</h1>
   <div class="top-actions">
+    <button onclick="toggleDarkMode()">🌙</button>
+    <button onclick="openUserList()">UsrLst</button>
     <button onclick="openAccountPopup()">Account</button>
     <button class="danger" onclick="logout()">Logout</button>
   </div>
 </header>
 
-<main class="dashboard-layout">
-
-  <section class="rooms-column">
-    <h2>Rooms</h2>
-    <div id="room-list" class="room-list"></div>
-  </section>
-
-  <section class="info-column">
-    <div id="room-info-panel" class="info-card">
-      <h3>Room Info</h3>
-
-      <div id="users-inside" class="info-block">
-        <strong>Users inside:</strong>
-      </div>
-
-      <div id="banned-users" class="info-block">
-        <strong>Banned:</strong>
-      </div>
-
-      <div id="muted-users" class="info-block">
-        <strong>Muted:</strong>
-      </div>
-    </div>
-  </section>
-
-</main>
-
-<!-- ACCOUNT POPUP -->
-<div id="account-popup" class="popup">
+<!-- USER LIST -->
+<div id="user-list-panel" class="popup">
   <div class="popup-content">
-    <h3>Account Settings</h3>
-
-    <label>Display Name</label>
-    <input id="displayname-input">
-
-    <button onclick="changeDisplayName()">Save</button>
-    <button onclick="changePassword()">Change Password</button>
-
-    <label>Active Title</label>
-    <select id="title-select"></select>
-    <button onclick="setActiveTitle()">Equip</button>
-
-    <button onclick="createNewAccount()">Create User (core+)</button>
-
-    <button class="secondary" onclick="closeAccountPopup()">Close</button>
+    <h3>Active Users</h3>
+    <div id="user-list"></div>
+    <button onclick="closeUserList()">Close</button>
   </div>
 </div>
-
-<script type="module">
-import { currentUser, loadRooms } from "./app.js";
-
-window.onload = () => {
-    if (!currentUser) location.href = "index.html";
-    loadRooms();
-};
-</script>
-
-<script type="module" src="app.js"></script>
-</body>
-</html>
