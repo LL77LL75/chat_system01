@@ -150,3 +150,7 @@ window.joinRoom = function(room) {
 
     window.location.href = "chat.html?room=" + room;
 };
+//hi
+//if u r looking at this u r a cheater
+//but u r smart so 
+//test2,test2
