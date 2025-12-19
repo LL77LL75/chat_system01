@@ -1,24 +1,36 @@
+/* Base */
 body {
   font-family: Arial, sans-serif;
   margin: 0;
   background: #f4f4f4;
+  color: #000;
 }
 
+/* ================= DARK MODE ================= */
+/* Invert EVERYTHING */
 body.dark {
-  background: #121212;
-  color: #eee;
+  filter: invert(1) hue-rotate(180deg);
+  background: #000;
 }
 
-.centered {
-  text-align: center;
-  padding-top: 100px;
+/* Undo inversion for images/icons if needed */
+body.dark img {
+  filter: invert(1) hue-rotate(180deg);
 }
 
-.login-form input {
-  margin: 5px;
-  padding: 8px;
+/* ================= USER LIST COLORS ================= */
+/* These must NOT invert */
+.user-banned {
+  color: red !important;
+  filter: none !important;
 }
 
+.user-muted {
+  color: goldenrod !important;
+  filter: none !important;
+}
+
+/* ================= UI ================= */
 .top-bar {
   display: flex;
   justify-content: space-between;
@@ -49,10 +61,7 @@ body.dark {
   border-radius: 6px;
 }
 
-.system {
-  color: gray;
-  font-style: italic;
-}
+/* ================= CHAT ================= */
 .msg {
   position: relative;
   padding: 6px;
@@ -70,4 +79,9 @@ body.dark {
 
 .msg:hover .del-btn {
   opacity: 1;
+}
+
+.system {
+  color: gray;
+  font-style: italic;
 }
