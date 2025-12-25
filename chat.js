@@ -1,137 +1,52 @@
 import { db } from "./app.js";
-import {
-  ref,
-  push,
-  set,
-  onValue,
-  remove,
-  get,
-  onDisconnect
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { ref, push, set, onValue, remove, get, onDisconnect } 
+from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-/* ------------------ BASIC SETUP ------------------ */
+const room = new URLSearchParams(location.search).get("room");
+if (!room || !window.currentUser) location.href = "dashboard.html";
 
-const params = new URLSearchParams(window.location.search);
-const room = params.get("room");
+const user = window.currentUser.username;
+document.getElementById("room-title").textContent = room;
 
-const msgBox = document.getElementById("messages");
-const input = document.getElementById("msg-input");
-const titleEl = document.getElementById("room-title");
-
-if (!room || !window.currentUser) {
-  location.href = "dashboard.html";
-}
-
-titleEl.textContent = "Room: " + room;
-
-const username = window.currentUser.username;
-
-/* ------------------ JOIN / LEAVE ------------------ */
-
-const memberRef = ref(db, `members/${room}/${username}`);
-set(memberRef, { joinedAt: Date.now() });
+const memberRef = ref(db, `roomMembers/${room}/${user}`);
+set(memberRef, true);
 onDisconnect(memberRef).remove();
 
-// join system message
-push(ref(db, `messages/${room}`), {
-  system: true,
-  text: `[SYSTEM] ${username} has joined the room.`,
-  time: Date.now()
-});
-
-// leave handler
-window.leaveRoom = async function () {
-  await push(ref(db, `messages/${room}`), {
-    system: true,
-    text: `[SYSTEM] ${username} has left the room.`,
-    time: Date.now()
-  });
+window.leaveRoom = async () => {
   await remove(memberRef);
   location.href = "dashboard.html";
 };
 
-/* ------------------ BAN / MUTE CHECK ------------------ */
-
-async function checkBanMute() {
-  const banSnap = await get(ref(db, `bans/${username}`));
-  if (banSnap.exists()) {
-    alert("You are banned.");
-    location.href = "dashboard.html";
-    return false;
-  }
-
-  const muteSnap = await get(ref(db, `mutes/${username}`));
-  if (muteSnap.exists()) {
-    alert("You are muted.");
-    return false;
-  }
-  return true;
-}
-
-/* ------------------ SEND MESSAGE ------------------ */
-
-window.sendMessage = async function () {
-  const text = input.value.trim();
-  if (!text) return;
-
-  if (!(await checkBanMute())) return;
+window.sendMessage = async () => {
+  const input = document.getElementById("msg-input");
+  if (!input.value.trim()) return;
 
   await push(ref(db, `messages/${room}`), {
-    sender: username,
+    sender: user,
     title: window.currentUser.activeTitle || "",
-    text,
+    text: input.value,
     time: Date.now()
   });
-
   input.value = "";
 };
 
-/* ------------------ MESSAGE LISTENER ------------------ */
-
 onValue(ref(db, `messages/${room}`), snap => {
-  msgBox.innerHTML = "";
-
-  snap.forEach(msgSnap => {
-    const m = msgSnap.val();
+  const box = document.getElementById("messages");
+  box.innerHTML = "";
+  snap.forEach(s => {
+    const m = s.val();
     const div = document.createElement("div");
-
     div.className = m.system ? "system-msg" : "chat-msg";
+    div.textContent = m.system ? m.text : `[${m.title}] ${m.sender}: ${m.text}`;
 
-    if (m.system) {
-      div.textContent = m.text;
-    } else {
-      div.textContent = `[${m.title}] ${m.sender}: ${m.text}`;
-
-      // DELETE BUTTON (your messages only)
-      if (m.sender === username) {
-        const del = document.createElement("button");
-        del.textContent = "🗑";
-        del.className = "delete-btn";
-        del.style.display = "none";
-
-        del.onclick = () => {
-          remove(ref(db, `messages/${room}/${msgSnap.key}`));
-        };
-
-        div.appendChild(del);
-
-        div.onmouseenter = () => (del.style.display = "inline");
-        div.onmouseleave = () => (del.style.display = "none");
-      }
+    if (m.sender === user) {
+      const del = document.createElement("button");
+      del.textContent = "🗑";
+      del.className = "delete-btn";
+      del.onclick = () => remove(ref(db, `messages/${room}/${s.key}`));
+      div.appendChild(del);
     }
-
-    msgBox.appendChild(div);
+    box.appendChild(div);
   });
-
-  msgBox.scrollTop = msgBox.scrollHeight;
+  box.scrollTop = box.scrollHeight;
 });
-
-/* ------------------ ACCOUNT POPUP ------------------ */
-
-window.openAccountPopup = function () {
-  document.getElementById("account-popup").style.display = "block";
-};
-
-window.closeAccountPopup = function () {
-  document.getElementById("account-popup").style.display = "none";
-};
