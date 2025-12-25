@@ -125,3 +125,12 @@ body.dark .chat-msg, body.dark .system-msg { background:#222; color:#eee; }
 .reaction-btn, .edit-btn { margin-left:5px; cursor:pointer; }
 .system-msg { color:gray; font-style:italic; }
 .chat-msg { position:relative; margin-bottom:4px; padding:4px; border-radius:4px; }
+body.dark { background:#121212; color:#eee; }
+body.dark .chat-msg, body.dark .system-msg, body.dark .room-panel, body.dark .top-bar { background:#222; color:#eee; }
+.top-bar { background: #2196f3; padding: 5px; display:flex; gap:5px; align-items:center; }
+.top-bar button { font-size:12px; padding:4px 6px; cursor:pointer; }
+.chat-msg { position:relative; margin-bottom:4px; padding:4px; border-radius:4px; }
+.system-msg { color:gray; font-style:italic; }
+.reaction-btn, .edit-btn { margin-left:5px; cursor:pointer; }
+.room-panel { border:1px solid #ccc; padding:5px; margin-top:5px; }
+button { cursor:pointer; }
