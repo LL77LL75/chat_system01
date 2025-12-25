@@ -107,3 +107,20 @@ window.initDashboard = () => {
   if(!window.currentUser) location.href = "index.html";
   loadRooms();
 };
+// ... existing code ...
+
+// Add Room button (admin+ only)
+window.addRoom = async () => {
+  if (!window.currentUser) return alert("Not logged in");
+  if (!["admin", "high", "core", "pioneer"].includes(window.currentUser.rank)) return alert("No permission");
+
+  const roomName = prompt("Enter new room name:");
+  if (!roomName) return;
+
+  const roomRef = ref(db, `rooms/${roomName}`);
+  const snap = await get(roomRef);
+  if (snap.exists()) return alert("Room already exists");
+
+  await set(roomRef, { createdBy: window.currentUser.username, createdAt: Date.now() });
+  alert(`Room "${roomName}" created!`);
+};
