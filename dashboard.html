@@ -1,46 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8" />
-    <title>Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="top-bar">
-        <button onclick="openAccountPopup()">Account</button>
-        <button onclick="logout()">Leave</button>
-        <button onclick="toggleDarkMode()">Dark Mode</button>
-    </div>
+<body onload="initDashboard()">
 
-    <h2>Rooms</h2>
-    <div id="room-list"></div>
+<!-- Top bar -->
+<div class="top-bar">
+  <button onclick="openAccountPopup()">Account</button>
+  <button onclick="logout()">Leave</button>
+  <button onclick="toggleDarkMode()">Dark Mode</button>
+</div>
 
-    <!-- Room info panel -->
-    <div id="room-info-panel" class="room-panel">
-        <h3 id="current-room-title"></h3>
-        <h4>Inside</h4>
-        <ul id="users-inside"></ul>
-        <h4>Banned</h4>
-        <ul id="users-banned"></ul>
-        <h4>Muted</h4>
-        <ul id="users-muted"></ul>
+<h2>Rooms</h2>
+<div id="room-list" class="room-list"></div>
 
-        <button id="join-room-btn">Join Room</button>
-        <button id="add-room-btn" style="display:none">Add Room</button>
-        <button id="delete-room-btn" style="display:none">Delete Room</button>
-    </div>
+<div id="room-info-panel" class="room-panel"></div>
 
-    <!-- ACCOUNT POPUP -->
-    <div id="account-popup" class="popup">
-        <div class="popup-content">
-            <h3>Account Settings</h3>
-            <input id="displayname-input" placeholder="Display name">
-            <button onclick="changeDisplayName()">Save</button>
-            <button onclick="changePassword()">Change Password</button>
-            <button onclick="closeAccountPopup()">Close</button>
-        </div>
-    </div>
+<!-- ACCOUNT POPUP -->
+<div id="account-popup" class="popup">
+  <div class="popup-content">
+    <h3>Account Settings</h3>
+    <label>Display Name:</label>
+    <input id="displayname-input" />
+    <button onclick="changeDisplayName()">Save Display Name</button>
+    <br><br>
+    <button onclick="changePassword()">Change Password</button>
+    <br><br>
+    <label>Active Title:</label>
+    <select id="title-select"></select>
+    <button onclick="setActiveTitle()">Equip Title</button>
+    <br><br>
+    <button id="create-account-btn" onclick="createNewAccount()">Create New Account (core+)</button>
+    <br><br>
+    <button onclick="closeAccountPopup()">Close</button>
+  </div>
+</div>
 
-    <script type="module" src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
