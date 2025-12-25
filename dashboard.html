@@ -6,13 +6,13 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h2>Dashboard</h2>
+    <div class="top-bar">
+        <button onclick="openAccountPopup()">Account</button>
+        <button onclick="logout()">Leave</button>
+        <button onclick="toggleDarkMode()">Dark Mode</button>
+    </div>
 
-    <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
-    <button onclick="openAccountPopup()">Account</button>
-    <button onclick="logout()">Logout</button>
-
-    <h3>Rooms</h3>
+    <h2>Rooms</h2>
     <div id="room-list"></div>
 
     <!-- Room info panel -->
@@ -24,7 +24,10 @@
         <ul id="users-banned"></ul>
         <h4>Muted</h4>
         <ul id="users-muted"></ul>
+
         <button id="join-room-btn">Join Room</button>
+        <button id="add-room-btn" style="display:none">Add Room</button>
+        <button id="delete-room-btn" style="display:none">Delete Room</button>
     </div>
 
     <!-- ACCOUNT POPUP -->

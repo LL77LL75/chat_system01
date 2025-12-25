@@ -1,26 +1,38 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Chat Room</title>
-<link rel="icon" href="favicon.png">
-<link rel="stylesheet" href="style.css">
+    <meta charset="utf-8" />
+    <title>Chat Room</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="chat-layout">
+<body>
+    <div class="top-bar">
+        <button onclick="openAccountPopup()">Account</button>
+        <button onclick="leaveRoom()">Leave</button>
+        <button onclick="toggleDarkMode()">Dark Mode</button>
+    </div>
 
-<header class="top-bar">
-  <h4 id="room-title"></h4>
-  <button onclick="leaveRoom()">Leave</button>
-</header>
+    <h2 id="room-title"></h2>
 
-<div id="messages" class="chat-messages"></div>
+    <div id="messages"></div>
 
-<form class="chat-input" onsubmit="event.preventDefault(); sendMessage();">
-  <input id="msg-input" placeholder="Type a message..." autocomplete="off">
-  <button>Send</button>
-</form>
+    <form onsubmit="event.preventDefault(); sendMessage();">
+        <input id="msg-input" placeholder="Type a message..." autocomplete="off">
+        <button type="submit">Send</button>
+    </form>
 
-<script type="module" src="chat.js"></script>
-<script type="module" src="app.js"></script>
+    <!-- ACCOUNT POPUP -->
+    <div id="account-popup" class="popup">
+        <div class="popup-content">
+            <h3>Account</h3>
+            <input id="displayname-input">
+            <button onclick="changeDisplayName()">Save</button>
+            <button onclick="changePassword()">Change Password</button>
+            <button onclick="closeAccountPopup()">Close</button>
+        </div>
+    </div>
+
+    <script type="module" src="chat.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
