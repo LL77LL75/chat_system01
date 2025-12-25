@@ -1,47 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <title>Dashboard</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<!-- Top Blue Bar -->
 <div class="top-bar">
-  <span>Dashboard</span>
-  <div class="top-buttons">
-    <button onclick="openAccountPopup()">Account</button>
-    <button onclick="toggleDarkMode()">Dark Mode</button>
-    <button onclick="logout()">Logout</button>
-    <button onclick="addRoom()">Add Room</button>
-  </div>
+  <button onclick="window.logout()">Logout</button>
+  <button onclick="window.openAccountPopup()">Account</button>
+  <button onclick="window.toggleDarkMode()">Dark Mode</button>
+  <button onclick="window.addRoom()">Add Room</button>
 </div>
 
-<h3>Rooms</h3>
-<div id="room-list" class="room-list"></div>
+<h2>Rooms</h2>
+<div id="room-list"></div>
 
-<div id="room-info-panel" class="room-panel">
-  <h3 id="current-room-title"></h3>
-  <ul id="users-inside"></ul>
-  <ul id="users-banned"></ul>
-  <ul id="users-muted"></ul>
-  <button id="join-room-btn">Join Room</button>
-  <button id="delete-room-btn">Delete Room</button>
-</div>
+<div id="room-info-panel" class="room-panel"></div>
 
+<!-- ACCOUNT POPUP -->
 <div id="account-popup" class="popup">
   <div class="popup-content">
     <h3>Account Settings</h3>
     <label>Display Name:</label>
-    <input id="displayname-input">
-    <button onclick="changeDisplayName()">Save Display Name</button>
+    <input id="displayname-input" />
+    <button onclick="window.changeDisplayName()">Save Display Name</button>
     <br><br>
-    <button onclick="changePassword()">Change Password</button>
+    <button onclick="window.changePassword()">Change Password</button>
     <br><br>
     <label>Active Title:</label>
     <select id="title-select"></select>
-    <button onclick="setActiveTitle()">Equip Title</button>
+    <button onclick="window.setActiveTitle()">Equip Title</button>
     <br><br>
-    <button onclick="closeAccountPopup()">Close</button>
+    <button onclick="window.closeAccountPopup()">Close</button>
   </div>
 </div>
 
