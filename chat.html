@@ -1,24 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>Chat Room</title>
-<link rel="stylesheet" href="style.css">
+    <title>Chat Room</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<h2 id="room-title"></h2>
+
 <div class="chat-top-bar">
-  <h2 id="room-title">Room</h2>
-  <button onclick="openAccountPopup()">Account</button>
-  <button onclick="openUserList()">UsrLst</button>
+    <button onclick="openAccountPopup()">Account</button>
+    <button onclick="leaveRoom()">Leave Room</button>
 </div>
 
-<div id="messages" class="chat-box"></div>
+<div id="messages"></div>
 
 <form onsubmit="event.preventDefault(); sendMessage();">
-  <input id="msg-input" placeholder="Type message..." autocomplete="off"/>
-  <button type="submit">Send</button>
+    <input id="msg-input" placeholder="Type message..." autocomplete="off">
+    <button type="submit">Send</button>
 </form>
+
+<!-- ACCOUNT POPUP -->
+<div id="account-popup" class="popup">
+    <div class="popup-content">
+        <h3>Account</h3>
+        <label>Display Name:</label>
+        <input id="displayname-input">
+        <button onclick="changeDisplayName()">Save</button>
+        <br><br>
+        <button onclick="changePassword()">Change Password</button>
+        <br><br>
+        <button onclick="closeAccountPopup()">Close</button>
+    </div>
+</div>
 
 <script type="module" src="chat.js"></script>
 <script type="module" src="app.js"></script>
