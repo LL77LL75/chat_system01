@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Login</title>
-<link rel="icon" href="favicon.png">
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body class="center-screen">
 
 <div class="card login-card">
   <h2>Login</h2>
   <form onsubmit="event.preventDefault(); normalLogin(user.value.trim(), pass.value.trim());">
-    <input id="user" placeholder="Username" required>
-    <input id="pass" type="password" placeholder="Password" required>
+    <input id="user" placeholder="Username" required autocomplete="username">
+    <input id="pass" type="password" placeholder="Password" required autocomplete="current-password">
     <button class="primary-btn">Login</button>
   </form>
 </div>
