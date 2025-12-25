@@ -1,61 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Dashboard</title>
-<link rel="icon" href="favicon.png">
-<link rel="stylesheet" href="style.css">
+    <meta charset="utf-8" />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <h2>Dashboard</h2>
 
-<header class="top-bar">
-  <h3>Dashboard</h3>
-  <div>
-    <button onclick="toggleDarkMode()">🌙</button>
+    <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
     <button onclick="openAccountPopup()">Account</button>
     <button onclick="logout()">Logout</button>
-  </div>
-</header>
 
-<main class="dashboard-grid">
-  <section class="card">
-    <h4>Rooms</h4>
+    <h3>Rooms</h3>
     <div id="room-list"></div>
-  </section>
 
-  <section class="card">
-    <h4 id="room-title">Select a room</h4>
-
-    <div class="info-group">
-      <strong>Inside</strong>
-      <ul id="room-users"></ul>
+    <!-- Room info panel -->
+    <div id="room-info-panel" class="room-panel">
+        <h3 id="current-room-title"></h3>
+        <h4>Inside</h4>
+        <ul id="users-inside"></ul>
+        <h4>Banned</h4>
+        <ul id="users-banned"></ul>
+        <h4>Muted</h4>
+        <ul id="users-muted"></ul>
+        <button id="join-room-btn">Join Room</button>
     </div>
 
-    <div class="info-group">
-      <strong>Banned</strong>
-      <ul id="room-banned"></ul>
+    <!-- ACCOUNT POPUP -->
+    <div id="account-popup" class="popup">
+        <div class="popup-content">
+            <h3>Account Settings</h3>
+            <input id="displayname-input" placeholder="Display name">
+            <button onclick="changeDisplayName()">Save</button>
+            <button onclick="changePassword()">Change Password</button>
+            <button onclick="closeAccountPopup()">Close</button>
+        </div>
     </div>
 
-    <div class="info-group">
-      <strong>Muted</strong>
-      <ul id="room-muted"></ul>
-    </div>
-
-    <button id="join-room-btn" class="primary-btn" disabled>Join Room</button>
-  </section>
-</main>
-
-<!-- ACCOUNT POPUP -->
-<div id="account-popup" class="popup">
-  <div class="popup-content">
-    <h3>Account</h3>
-    <input id="displayname-input" placeholder="Display name">
-    <button onclick="changeDisplayName()">Save</button>
-    <button onclick="changePassword()">Change Password</button>
-    <button onclick="closeAccountPopup()">Close</button>
-  </div>
-</div>
-
-<script type="module" src="app.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
