@@ -1,101 +1,146 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getDatabase, ref, set, push, remove, onValue, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getDatabase, ref, get, set, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_DOMAIN",
-  databaseURL: "YOUR_DB_URL",
-  projectId: "YOUR_PROJECT_ID",
+  apiKey: "AIzaSyCY5_krGDfHcp4ZmUe5RXo7BaKYUQwAM8E",
+  authDomain: "chat-app-6767.firebaseapp.com",
+  databaseURL: "https://chat-app-6767-default-rtdb.firebaseio.com",
+  projectId: "chat-app-6767",
+  storageBucket: "chat-app-6767.appspot.com",
+  messagingSenderId: "705833150639",
+  appId: "1:705833150639:web:618339099f129a4ccacc5a"
 };
 const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
 
-// Dark mode
-if(localStorage.getItem("darkMode")==="true") document.body.classList.add("dark");
-window.toggleDarkMode = () => {
+// Persistent dark mode
+if (localStorage.getItem("darkMode") === "true") document.body.classList.add("dark");
+
+window.toggleDarkMode = function() {
   document.body.classList.toggle("dark");
   localStorage.setItem("darkMode", document.body.classList.contains("dark"));
 };
 
-// User info placeholder
-window.currentUser = { username:"User1", isAdmin:true };
+// Login/logout
+window.normalLogin = async (username, password) => {
+  const snap = await get(ref(db, `users/${username}`));
+  if (!snap.exists()) return alert("User not found");
+  const u = snap.val();
+  if (u.password !== password) return alert("Wrong password");
+  window.currentUser = { username, ...u };
+  localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+  location.href = "dashboard.html";
+};
+
+window.logout = () => {
+  localStorage.removeItem("currentUser");
+  location.href = "index.html";
+};
 
 // Account popup
-window.openAccountPopup = ()=>document.getElementById("account-popup").style.display="block";
-window.closeAccountPopup = ()=>document.getElementById("account-popup").style.display="none";
+window.openAccountPopup = function() {
+  const p = document.getElementById("account-popup");
+  if (!p || !window.currentUser) return;
+  document.getElementById("displayname-input").value = window.currentUser.displayName || "";
+  const sel = document.getElementById("title-select");
+  sel.innerHTML = "";
+  const titles = window.currentUser.titles || {};
+  Object.keys(titles).forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    sel.appendChild(opt);
+  });
+  if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
+  p.style.display = "block";
+};
+
+window.closeAccountPopup = function() {
+  const p = document.getElementById("account-popup");
+  if (p) p.style.display = "none";
+};
+
+window.changeDisplayName = async function() {
+  const name = document.getElementById("displayname-input").value.trim();
+  if (!name || !window.currentUser) return;
+  await update(ref(db, `users/${window.currentUser.username}`), { displayName: name });
+  window.currentUser.displayName = name;
+  localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+};
+
+window.changePassword = async function() {
+  const pw = prompt("Enter new password:");
+  if (!pw || !window.currentUser) return;
+  await update(ref(db, `users/${window.currentUser.username}`), { password: pw });
+  window.currentUser.password = pw;
+  localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+};
 
 // Rooms
-const roomList = document.getElementById("room-list");
-const roomInfoPanel = document.getElementById("room-info-panel");
-const usersInside = document.getElementById("users-inside");
-const usersBanned = document.getElementById("users-banned");
-const usersMuted = document.getElementById("users-muted");
-
-export async function loadRooms() {
-  onValue(ref(db, "rooms"), snap=>{
-    roomList.innerHTML="";
-    snap.forEach(r=>{
+window.loadRooms = function() {
+  const list = document.getElementById("room-list");
+  if (!list) return;
+  onValue(ref(db, "rooms"), snap => {
+    list.innerHTML = "";
+    snap.forEach(r => {
       const btn = document.createElement("button");
-      btn.textContent=r.key;
-      btn.onclick=()=>loadRoomInfo(r.key);
-      roomList.appendChild(btn);
-    });
-  });
-}
-
-window.addRoom = async () => {
-  if(!window.currentUser.isAdmin) return alert("Admin only");
-  const name=prompt("Room name:");
-  if(name) await set(ref(db, `rooms/${name}`), true);
-};
-
-window.deleteRoom = async () => {
-  if(!window.currentUser.isAdmin) return alert("Admin only");
-  const roomName = document.getElementById("current-room-title").textContent;
-  if(roomName && confirm("Delete room?")) await remove(ref(db, `rooms/${roomName}`));
-  roomInfoPanel.style.display="none";
-};
-
-// Load info
-window.loadRoomInfo = (roomName)=>{
-  document.getElementById("current-room-title").textContent=roomName;
-  roomInfoPanel.style.display="block";
-  const membersRef = ref(db, `roomMembers/${roomName}`);
-  onValue(membersRef, snap=>{
-    usersInside.innerHTML="<strong>Inside:</strong>";
-    snap.forEach(u=>{
-      const li=document.createElement("li");
-      li.textContent=u.key;
-      if(window.currentUser.isAdmin){
-        const mute = document.createElement("button"); mute.textContent="Mute"; mute.onclick=()=>muteUser(roomName,u.key);
-        const ban = document.createElement("button"); ban.textContent="Ban"; ban.onclick=()=>banUser(roomName,u.key);
-        li.appendChild(mute); li.appendChild(ban);
-      }
-      usersInside.appendChild(li);
+      btn.textContent = r.key;
+      btn.onclick = () => window.loadRoomInfo(r.key);
+      list.appendChild(btn);
     });
   });
 };
 
-// Mute/ban
-window.muteUser = async (room,user)=>update(ref(db,`muted/${room}/${user}`),true);
-window.banUser = async (room,user)=>{
-  await update(ref(db,`banned/${room}/${user}`),true);
-  await remove(ref(db,`roomMembers/${room}/${user}`));
+// Add Room
+window.addRoom = async function() {
+  const roomName = prompt("Enter new room name:");
+  if (!roomName) return;
+  await set(ref(db, `rooms/${roomName}`), { createdAt: Date.now() });
+  alert("Room added!");
 };
 
-// Join room
-window.joinRoom = async ()=>{
-  const roomName = document.getElementById("current-room-title").textContent;
-  if(!roomName) return;
-  await set(ref(db, `roomMembers/${roomName}/${window.currentUser.username}`), true);
-  systemLog(roomName,`${window.currentUser.username} joined the room`);
+// Load Room Info
+window.loadRoomInfo = function(room) {
+  const panel = document.getElementById("room-info-panel");
+  if (!panel) return;
+  panel.innerHTML = `<h3>Room: ${room}</h3><button id="join-room-btn">Join Room</button><ul id="users-inside"></ul><ul id="users-banned"></ul><ul id="users-muted"></ul>`;
+  
+  // Members
+  onValue(ref(db, `roomMembers/${room}`), snap => {
+    const ul = document.getElementById("users-inside");
+    ul.innerHTML = "";
+    snap.forEach(u => { const li = document.createElement("li"); li.textContent = u.key; ul.appendChild(li); });
+  });
+  
+  // Banned
+  onValue(ref(db, `roomBans/${room}`), snap => {
+    const ul = document.getElementById("users-banned");
+    ul.innerHTML = "";
+    snap.forEach(u => {
+      const li = document.createElement("li");
+      li.textContent = u.key;
+      if (u.val().global) li.style.color="grey";
+      ul.appendChild(li);
+    });
+  });
+  
+  // Muted
+  onValue(ref(db, `roomMutes/${room}`), snap => {
+    const ul = document.getElementById("users-muted");
+    ul.innerHTML = "";
+    snap.forEach(u => {
+      const li = document.createElement("li");
+      li.textContent = u.key;
+      if (u.val().global) li.style.color="grey";
+      ul.appendChild(li);
+    });
+  });
+
+  document.getElementById("join-room-btn").onclick = function() {
+    if (!window.currentUser) return alert("Not logged in");
+    const user = window.currentUser.username;
+    set(ref(db, `roomMembers/${room}/${user}`), true);
+    push(ref(db, `messages/${room}`), { system: true, text:`[SYSTEM] ${user} joined the room.`, time: Date.now() });
+    location.href = "chat.html?room=" + room;
+  };
 };
-
-// System logs
-export async function systemLog(room,msg){
-  const sRef=push(ref(db,`messages/${room}`));
-  await set(sRef,{user:"[SYSTEM]",text:msg,timestamp:Date.now(),reactions:{}});
-}
-
-// Initial load
-loadRooms();
