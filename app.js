@@ -6,8 +6,13 @@ const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
 window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 
-// Persistent dark mode
-if(localStorage.getItem("darkMode") === "true") document.body.classList.add("dark");
+// Persistent Dark Mode
+if (localStorage.getItem("darkMode") === "true") document.body.classList.add("dark");
+
+window.toggleDarkMode = () => {
+  document.body.classList.toggle("dark");
+  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+};
 
 // Login/logout
 window.normalLogin = async (username, password) => {
@@ -21,13 +26,7 @@ window.normalLogin = async (username, password) => {
 };
 window.logout = () => { localStorage.removeItem("currentUser"); location.href="index.html"; };
 
-// Toggle dark mode
-window.toggleDarkMode = () => {
-  document.body.classList.toggle("dark");
-  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
-};
-
-// Load rooms and create buttons
+// Rooms
 window.loadRooms = () => {
   const list = document.getElementById("room-list");
   if (!list) return;
@@ -36,91 +35,82 @@ window.loadRooms = () => {
     snap.forEach(r => {
       const btn = document.createElement("button");
       btn.textContent = r.key;
-      btn.onclick = () => loadRoomInfo(r.key);
+      btn.onclick = () => window.loadRoomInfo(r.key);
       list.appendChild(btn);
     });
   });
 };
 
-// Room info panel
+window.addRoom = async () => {
+  const room = prompt("New Room Name:");
+  if (!room) return;
+  await set(ref(db, `rooms/${room}`), true);
+  alert(`Room "${room}" added`);
+};
+
 window.loadRoomInfo = async (room) => {
   const panel = document.getElementById("room-info-panel");
-  if(!panel) return;
-  panel.innerHTML = `<h3>Room: ${room}</h3>
-    <ul id="users-inside"></ul>
-    <ul id="users-banned"></ul>
-    <ul id="users-muted"></ul>
-    <button id="join-room-btn">Join Room</button>`;
+  panel.innerHTML = "";
+  // Members
+  const membersSnap = await get(ref(db, `roomMembers/${room}`));
+  let membersList = "";
+  membersSnap.forEach(u => membersList += `<li>${u.key}</li>`);
 
-  // Users inside
-  onValue(ref(db, `roomMembers/${room}`), snap => {
-    const ul = document.getElementById("users-inside");
-    ul.innerHTML = "<b>Inside:</b>";
-    snap.forEach(userSnap => {
-      const li = document.createElement("li");
-      li.textContent = userSnap.key;
-      ul.appendChild(li);
-    });
-  });
+  const bansSnap = await get(ref(db, `roomBans/${room}`));
+  let bannedList = "";
+  bansSnap.forEach(u => bannedList += `<li>${u.key}</li>`);
 
-  // Banned users
-  onValue(ref(db, `roomBans/${room}`), snap => {
-    const ul = document.getElementById("users-banned");
-    ul.innerHTML = "<b>Banned:</b>";
-    snap.forEach(userSnap => {
-      const li = document.createElement("li");
-      li.textContent = userSnap.key;
-      if(userSnap.val().global) li.style.color="grey";
-      ul.appendChild(li);
-    });
-  });
+  const mutesSnap = await get(ref(db, `roomMutes/${room}`));
+  let mutedList = "";
+  mutesSnap.forEach(u => mutedList += `<li>${u.key}</li>`);
 
-  // Muted users
-  onValue(ref(db, `roomMutes/${room}`), snap => {
-    const ul = document.getElementById("users-muted");
-    ul.innerHTML = "<b>Muted:</b>";
-    snap.forEach(userSnap => {
-      const li = document.createElement("li");
-      li.textContent = userSnap.key;
-      if(userSnap.val().global) li.style.color="grey";
-      ul.appendChild(li);
-    });
-  });
+  panel.innerHTML = `
+    <h3>Room: ${room}</h3>
+    <p>Users inside:</p><ul>${membersList}</ul>
+    <p>Banned users:</p><ul>${bannedList}</ul>
+    <p>Muted users:</p><ul>${mutedList}</ul>
+    <button onclick="joinRoom('${room}')">Join Room</button>
+  `;
 
-  // Join room
-  const joinBtn = document.getElementById("join-room-btn");
-  joinBtn.onclick = () => {
-    if(!window.currentUser) return alert("Not logged in");
-    set(ref(db, `roomMembers/${room}/${window.currentUser.username}`), true);
-    push(ref(db, `messages/${room}`), {
-      sender: "[SYSTEM]",
-      text: `${window.currentUser.username} has joined.`,
-      time: Date.now(),
-      system: true
-    });
-    location.href = "chat.html?room=" + room;
-  };
+  // Admin+ delete button
+  const deleteBtn = document.getElementById("delete-room-btn");
+  if (["admin","high","core","pioneer"].includes(window.currentUser.rank)) {
+    deleteBtn.style.display = "inline-block";
+    deleteBtn.dataset.room = room;
+  } else {
+    deleteBtn.style.display = "none";
+  }
 };
 
-// Dashboard initialization
-window.initDashboard = () => {
-  if(!window.currentUser) location.href = "index.html";
-  loadRooms();
+window.deleteRoom = async () => {
+  const btn = document.getElementById("delete-room-btn");
+  const room = btn.dataset.room;
+  if (!room) return;
+  if (!confirm(`Delete room "${room}"? All messages and members will be removed.`)) return;
+
+  await remove(ref(db, `rooms/${room}`));
+  await remove(ref(db, `roomMembers/${room}`));
+  await remove(ref(db, `messages/${room}`));
+  await remove(ref(db, `roomBans/${room}`));
+  await remove(ref(db, `roomMutes/${room}`));
+  alert(`Room "${room}" deleted`);
+  document.getElementById("room-info-panel").innerHTML = "";
 };
-// ... existing code ...
 
-// Add Room button (admin+ only)
-window.addRoom = async () => {
-  if (!window.currentUser) return alert("Not logged in");
-  if (!["admin", "high", "core", "pioneer"].includes(window.currentUser.rank)) return alert("No permission");
-
-  const roomName = prompt("Enter new room name:");
-  if (!roomName) return;
-
-  const roomRef = ref(db, `rooms/${roomName}`);
-  const snap = await get(roomRef);
-  if (snap.exists()) return alert("Room already exists");
-
-  await set(roomRef, { createdBy: window.currentUser.username, createdAt: Date.now() });
-  alert(`Room "${roomName}" created!`);
+// Account popup
+window.openAccountPopup = () => {
+  const p = document.getElementById("account-popup");
+  if (!p || !window.currentUser) return;
+  document.getElementById("displayname-input").value = window.currentUser.displayName || "";
+  const sel = document.getElementById("title-select");
+  sel.innerHTML = "";
+  const titles = window.currentUser.titles || {};
+  Object.keys(titles).forEach(t => {
+    const opt=document.createElement("option");
+    opt.value=t; opt.textContent=t;
+    sel.appendChild(opt);
+  });
+  if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
+  p.style.display="block";
 };
+window.closeAccountPopup = () => { const p=document.getElementById("account-popup"); if(p)p.style.display="none"; };

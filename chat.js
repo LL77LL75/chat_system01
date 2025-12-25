@@ -1,90 +1,106 @@
-import { db } from "./app.js";
-import { ref, push, set, onValue, remove, onDisconnect, get, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { db } from './app.js';
+import { ref, push, set, onValue, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-const params = new URLSearchParams(window.location.search);
-const room = params.get("room");
-const msgBox = document.getElementById("messages");
-const input = document.getElementById("msg-input");
-const titleEl = document.getElementById("room-title");
+const room = new URLSearchParams(window.location.search).get("room");
+document.getElementById("room-title").textContent = `Room: ${room}`;
 
-if (!room || !window.currentUser) location.href = "dashboard.html";
+const messagesEl = document.getElementById("messages");
+const msgInput = document.getElementById("msg-input");
 
-titleEl.textContent = "Room: " + room;
-const username = window.currentUser.username;
-
-// Join room
-const memberRef = ref(db, `members/${room}/${username}`);
-set(memberRef, { joinedAt: Date.now() });
-onDisconnect(memberRef).remove();
-push(ref(db, `messages/${room}`), { text:`[SYSTEM] ${username} joined.`, system:true, time:Date.now() });
-
-// Leave room
-window.leaveRoom = async function() {
-    await push(ref(db, `messages/${room}`), { text:`[SYSTEM] ${username} left.`, system:true, time:Date.now() });
-    await remove(memberRef);
-    location.href = "dashboard.html";
+// Persistent dark mode
+if (localStorage.getItem("darkMode") === "true") document.body.classList.add("dark");
+window.toggleDarkMode = () => {
+  document.body.classList.toggle("dark");
+  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
 };
 
-// Check mute/ban
-async function checkBanMute() {
-    const banSnap = await get(ref(db, `bans/${username}`));
-    if (banSnap.exists()) { alert("You are banned."); location.href="dashboard.html"; return false; }
-    const muteSnap = await get(ref(db, `mutes/${username}`));
-    if (muteSnap.exists()) { alert("You are muted."); return false; }
-    return true;
-}
-
-// Send message with post-actions
-window.sendMessage = async function() {
-    const text = input.value.trim();
-    if(!text) return;
-    if(!(await checkBanMute())) return;
-
-    const msgRef = push(ref(db, `messages/${room}`));
-    await set(msgRef, { sender: username, text, title: window.currentUser.activeTitle||"", time:Date.now(), reactions:{} });
-    input.value = "";
+// Send message
+window.sendMessage = async () => {
+  const msg = msgInput.value.trim();
+  if (!msg) return;
+  const mRef = push(ref(db, `messages/${room}`));
+  await set(mRef, {
+    user: window.currentUser.username,
+    text: msg,
+    timestamp: Date.now(),
+    reactions: {}
+  });
+  msgInput.value = '';
 };
 
-// Constant message display + post-actions (edit + reactions)
+// Listen to messages
 onValue(ref(db, `messages/${room}`), snap => {
-    msgBox.innerHTML = "";
-    snap.forEach(msgSnap => {
-        const m = msgSnap.val();
-        const div = document.createElement("div");
-        div.className = m.system ? "system-msg" : "chat-msg";
-        div.dataset.msgId = msgSnap.key;
-        div.dataset.sender = m.sender || "[SYSTEM]";
-        div.textContent = m.system ? m.text : `[${m.title}] ${m.sender}: ${m.text}`;
+  messagesEl.innerHTML = '';
+  snap.forEach(m => {
+    const data = m.val();
+    const msgDiv = document.createElement("div");
+    msgDiv.className = data.user === "[SYSTEM]" ? "system-msg" : "chat-msg";
+    msgDiv.dataset.key = m.key;
 
-        // Post-message actions
-        if(!m.system){
-            // Reactions
-            const emojis = ["❤️","👍","😂"];
-            emojis.forEach(e => {
-                const reactBtn = document.createElement("button");
-                reactBtn.textContent = e + (m.reactions && m.reactions[e] ? ` (${Object.keys(m.reactions[e]).length})` : "");
-                reactBtn.onclick = async () => {
-                    const path = ref(db, `messages/${room}/${msgSnap.key}/reactions/${e}/${username}`);
-                    const snap = await get(path);
-                    if(snap.exists()) remove(path);
-                    else set(path, true);
-                };
-                div.appendChild(reactBtn);
-            });
+    const usernameSpan = document.createElement("strong");
+    usernameSpan.textContent = data.user + ": ";
+    msgDiv.appendChild(usernameSpan);
 
-            // Edit button
-            if(m.sender === username){
-                const editBtn = document.createElement("button");
-                editBtn.textContent = "✏️";
-                editBtn.onclick = async () => {
-                    const newText = prompt("Edit message:", m.text);
-                    if(newText) await update(ref(db, `messages/${room}/${msgSnap.key}`), { text:newText });
-                };
-                div.appendChild(editBtn);
-            }
-        }
+    const textSpan = document.createElement("span");
+    textSpan.textContent = data.text;
+    msgDiv.appendChild(textSpan);
 
-        msgBox.appendChild(div);
-    });
-    msgBox.scrollTop = msgBox.scrollHeight;
+    // Edit button for own messages
+    if (data.user === window.currentUser.username && data.user !== "[SYSTEM]") {
+      const editBtn = document.createElement("button");
+      editBtn.textContent = "Edit";
+      editBtn.className = "edit-btn";
+      editBtn.onclick = () => editMessage(m.key, data.text);
+      msgDiv.appendChild(editBtn);
+    }
+
+    // Reactions
+    if (data.user !== "[SYSTEM]") {
+      const reactionsDiv = document.createElement("span");
+      ["👍", "❤️", "😂"].forEach(emoji => {
+        const rBtn = document.createElement("button");
+        rBtn.textContent = emoji + (data.reactions[emoji] || "");
+        rBtn.className = "reaction-btn";
+        rBtn.onclick = () => addReaction(m.key, emoji);
+        reactionsDiv.appendChild(rBtn);
+      });
+      msgDiv.appendChild(reactionsDiv);
+    }
+
+    messagesEl.appendChild(msgDiv);
+  });
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 });
+
+// Edit message
+const editMessage = (key, currentText) => {
+  const newText = prompt("Edit your message:", currentText);
+  if (!newText) return;
+  update(ref(db, `messages/${room}/${key}`), { text: newText });
+};
+
+// Add reaction
+const addReaction = async (key, emoji) => {
+  const refMsg = ref(db, `messages/${room}/${key}/reactions/${emoji}`);
+  onValue(refMsg, snap => {
+    const val = snap.val() || 0;
+    set(refMsg, val + 1);
+  }, { once: true });
+};
+
+// SYSTEM messages
+export const systemLog = async (text) => {
+  const sRef = push(ref(db, `messages/${room}`));
+  await set(sRef, { user: "[SYSTEM]", text, timestamp: Date.now(), reactions: {} });
+};
+
+// Example: log when someone joins
+window.joinRoom = async () => {
+  await set(ref(db, `roomMembers/${room}/${window.currentUser.username}`), true);
+  systemLog(`${window.currentUser.username} joined the room`);
+};
+window.leaveRoom = async () => {
+  await ref(db, `roomMembers/${room}/${window.currentUser.username}`).remove();
+  systemLog(`${window.currentUser.username} left the room`);
+  location.href = "dashboard.html";
+};
