@@ -1,118 +1,109 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getDatabase, ref, get, set, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { getDatabase, ref, get, set, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
 window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 
-// Persist dark mode
+// Persistent dark mode
 if(localStorage.getItem("darkMode") === "true") document.body.classList.add("dark");
-window.toggleDarkMode = () => {
-    document.body.classList.toggle("dark");
-    localStorage.setItem("darkMode", document.body.classList.contains("dark"));
-};
 
-// Login / Logout
+// Login/logout
 window.normalLogin = async (username, password) => {
-    const snap = await get(ref(db, `users/${username}`));
-    if (!snap.exists()) return alert("User not found");
-    const u = snap.val();
-    if (u.password !== password) return alert("Wrong password");
-    window.currentUser = { username, ...u };
-    localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-    location.href = "dashboard.html";
+  const snap = await get(ref(db, `users/${username}`));
+  if (!snap.exists()) return alert("User not found");
+  const u = snap.val();
+  if (u.password !== password) return alert("Wrong password");
+  window.currentUser = { username, ...u };
+  localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+  location.href = "dashboard.html";
 };
 window.logout = () => { localStorage.removeItem("currentUser"); location.href="index.html"; };
 
-// Account popup
-window.openAccountPopup = () => document.getElementById("account-popup").style.display="block";
-window.closeAccountPopup = () => document.getElementById("account-popup").style.display="none";
-
-// Change display name / password
-window.changeDisplayName = async () => {
-    const name = document.getElementById("displayname-input").value.trim();
-    if(!name || !window.currentUser) return;
-    await update(ref(db, `users/${window.currentUser.username}`), { displayName: name });
-    window.currentUser.displayName = name;
-    localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-};
-window.changePassword = async () => {
-    const pw = prompt("Enter new password:");
-    if(!pw || !window.currentUser) return;
-    await update(ref(db, `users/${window.currentUser.username}`), { password: pw });
-    window.currentUser.password = pw;
-    localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
+// Toggle dark mode
+window.toggleDarkMode = () => {
+  document.body.classList.toggle("dark");
+  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
 };
 
-// Load rooms
+// Load rooms and create buttons
 window.loadRooms = () => {
-    const list = document.getElementById("room-list");
-    if (!list) return;
-    onValue(ref(db, "rooms"), snap => {
-        list.innerHTML = "";
-        snap.forEach(r => {
-            const btn = document.createElement("button");
-            btn.textContent = r.key;
-            btn.onclick = () => loadRoomInfo(r.key);
-            list.appendChild(btn);
-        });
+  const list = document.getElementById("room-list");
+  if (!list) return;
+  onValue(ref(db, "rooms"), snap => {
+    list.innerHTML = "";
+    snap.forEach(r => {
+      const btn = document.createElement("button");
+      btn.textContent = r.key;
+      btn.onclick = () => loadRoomInfo(r.key);
+      list.appendChild(btn);
     });
+  });
 };
 
-// Load room info panel
+// Room info panel
 window.loadRoomInfo = async (room) => {
-    document.getElementById("current-room-title").textContent = "Room: " + room;
+  const panel = document.getElementById("room-info-panel");
+  if(!panel) return;
+  panel.innerHTML = `<h3>Room: ${room}</h3>
+    <ul id="users-inside"></ul>
+    <ul id="users-banned"></ul>
+    <ul id="users-muted"></ul>
+    <button id="join-room-btn">Join Room</button>`;
 
-    // Admin buttons
-    const addBtn = document.getElementById("add-room-btn");
-    const delBtn = document.getElementById("delete-room-btn");
-    if(window.currentUser && window.currentUser.admin){
-        addBtn.style.display = "inline-block";
-        delBtn.style.display = "inline-block";
-        addBtn.onclick = async () => {
-            const newRoom = prompt("New room name:");
-            if(newRoom) await set(ref(db, `rooms/${newRoom}`), true);
-        };
-        delBtn.onclick = async () => {
-            if(confirm("Delete this room?")){
-                await remove(ref(db, `rooms/${room}`));
-                await remove(ref(db, `roomMembers/${room}`));
-                await remove(ref(db, `messages/${room}`));
-                document.getElementById("room-info-panel").style.display="none";
-            }
-        };
-    } else {
-        addBtn.style.display = delBtn.style.display = "none";
-    }
-
-    // Users inside
-    const inside = document.getElementById("users-inside");
-    onValue(ref(db, `roomMembers/${room}`), snap => {
-        inside.innerHTML = "";
-        snap.forEach(s => { const li = document.createElement("li"); li.textContent = s.key; inside.appendChild(li); });
+  // Users inside
+  onValue(ref(db, `roomMembers/${room}`), snap => {
+    const ul = document.getElementById("users-inside");
+    ul.innerHTML = "<b>Inside:</b>";
+    snap.forEach(userSnap => {
+      const li = document.createElement("li");
+      li.textContent = userSnap.key;
+      ul.appendChild(li);
     });
+  });
 
-    // Banned
-    const banned = document.getElementById("users-banned");
-    onValue(ref(db, `roomBans/${room}`), snap => {
-        banned.innerHTML = "";
-        snap.forEach(s => { const li = document.createElement("li"); li.textContent = s.key; banned.appendChild(li); });
+  // Banned users
+  onValue(ref(db, `roomBans/${room}`), snap => {
+    const ul = document.getElementById("users-banned");
+    ul.innerHTML = "<b>Banned:</b>";
+    snap.forEach(userSnap => {
+      const li = document.createElement("li");
+      li.textContent = userSnap.key;
+      if(userSnap.val().global) li.style.color="grey";
+      ul.appendChild(li);
     });
+  });
 
-    // Muted
-    const muted = document.getElementById("users-muted");
-    onValue(ref(db, `roomMutes/${room}`), snap => {
-        muted.innerHTML = "";
-        snap.forEach(s => { const li = document.createElement("li"); li.textContent = s.key; muted.appendChild(li); });
+  // Muted users
+  onValue(ref(db, `roomMutes/${room}`), snap => {
+    const ul = document.getElementById("users-muted");
+    ul.innerHTML = "<b>Muted:</b>";
+    snap.forEach(userSnap => {
+      const li = document.createElement("li");
+      li.textContent = userSnap.key;
+      if(userSnap.val().global) li.style.color="grey";
+      ul.appendChild(li);
     });
+  });
 
-    // Join button
-    document.getElementById("join-room-btn").onclick = () => {
-        if (!window.currentUser) return alert("Not logged in");
-        const user = window.currentUser.username;
-        set(ref(db, `roomMembers/${room}/${user}`), true);
-        push(ref(db, `messages/${room}`), { text:`[SYSTEM] ${user} has joined.`, system:true, time:Date.now() });
-        location.href = "chat.html?room=" + room;
-    };
+  // Join room
+  const joinBtn = document.getElementById("join-room-btn");
+  joinBtn.onclick = () => {
+    if(!window.currentUser) return alert("Not logged in");
+    set(ref(db, `roomMembers/${room}/${window.currentUser.username}`), true);
+    push(ref(db, `messages/${room}`), {
+      sender: "[SYSTEM]",
+      text: `${window.currentUser.username} has joined.`,
+      time: Date.now(),
+      system: true
+    });
+    location.href = "chat.html?room=" + room;
+  };
+};
+
+// Dashboard initialization
+window.initDashboard = () => {
+  if(!window.currentUser) location.href = "index.html";
+  loadRooms();
 };
