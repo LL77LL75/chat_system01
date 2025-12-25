@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Dashboard</title>
@@ -44,6 +44,17 @@
     <button id="join-room-btn" class="primary-btn" disabled>Join Room</button>
   </section>
 </main>
+
+<!-- ACCOUNT POPUP -->
+<div id="account-popup" class="popup">
+  <div class="popup-content">
+    <h3>Account</h3>
+    <input id="displayname-input" placeholder="Display name">
+    <button onclick="changeDisplayName()">Save</button>
+    <button onclick="changePassword()">Change Password</button>
+    <button onclick="closeAccountPopup()">Close</button>
+  </div>
+</div>
 
 <script type="module" src="app.js"></script>
 </body>
