@@ -1,53 +1,53 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Dashboard</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Dashboard</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h2>Dashboard</h2>
+<header class="top-bar">
+  <h2>Dashboard</h2>
+  <div class="top-actions">
+    <button onclick="toggleDarkMode()">🌙</button>
+    <button onclick="openUserList()">Users</button>
+    <button onclick="openAccountPopup()">Account</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+</header>
 
-<button onclick="toggleDarkMode()">Toggle Dark Mode</button>
-<button onclick="logout()">Logout</button>
-<button onclick="openAccountPopup()">Account</button>
-<button onclick="openUserList()">User List</button>
+<main class="dashboard-grid">
+  <section class="card">
+    <h3>Rooms</h3>
+    <div id="room-list" class="room-list"></div>
+  </section>
 
-<h3>Rooms</h3>
-<div id="room-list"></div>
-<div id="room-info-panel" class="room-panel"></div>
+  <section class="card">
+    <div id="room-info-panel"></div>
+    <div id="banned-muted-panel"></div>
+  </section>
+</main>
 
-<!-- Banned/Muted panel -->
-<div id="banned-muted-panel" class="room-panel"></div>
-
-<!-- ACCOUNT POPUP -->
+<!-- ACCOUNT -->
 <div id="account-popup" class="popup">
   <div class="popup-content">
     <h3>Account Settings</h3>
 
-    <label>Display Name:</label>
-    <input id="displayname-input" />
-
-    <button onclick="changeDisplayName()">Save Display Name</button>
-    <br><br>
+    <input id="displayname-input" placeholder="Display Name">
+    <button onclick="changeDisplayName()">Save</button>
 
     <button onclick="changePassword()">Change Password</button>
-    <br><br>
 
-    <label>Active Title:</label>
     <select id="title-select"></select>
     <button onclick="setActiveTitle()">Equip Title</button>
 
-    <br><br>
-    <button id="create-account-btn" onclick="createNewAccount()">Create New Account (core+)</button>
-
-    <br><br>
+    <button onclick="createNewAccount()">Create Account (core+)</button>
     <button onclick="closeAccountPopup()">Close</button>
   </div>
 </div>
 
-<!-- USER LIST POPUP -->
+<!-- USER LIST -->
 <div id="user-list-panel" class="popup">
   <div class="popup-content">
     <h3>Online Users</h3>
@@ -56,129 +56,34 @@
   </div>
 </div>
 
+<script type="module" src="app.js"></script>
 <script type="module">
 import { db } from "./app.js";
 import { ref, onValue } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-// -----------------
-// Account Titles Dropdown
-// -----------------
-function refreshTitleList() {
-  if (!window.currentUser) return;
-  const sel = document.getElementById("title-select");
-  sel.innerHTML = "";
-  const titles = window.currentUser.titles || {};
-  Object.keys(titles).forEach(t => {
-    const opt = document.createElement("option");
-    opt.value = t;
-    opt.textContent = t;
-    sel.appendChild(opt);
-  });
-  if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
-}
+if (!window.currentUser) location.href = "index.html";
 
-// -----------------
-// Load Rooms
-// -----------------
-function loadRooms() {
+onValue(ref(db, "rooms"), snap => {
   const list = document.getElementById("room-list");
-  const panel = document.getElementById("room-info-panel");
-  const bannedPanel = document.getElementById("banned-muted-panel");
-  if (!list || !panel || !bannedPanel) return;
-
-  onValue(ref(db, "rooms"), snap => {
-    list.innerHTML = "";
-    snap.forEach(roomNode => {
-      const room = roomNode.key;
-      const btn = document.createElement("button");
-      btn.className = "room-btn";
-      btn.textContent = room;
-      btn.onclick = () => loadRoomInfo(room);
-      list.appendChild(btn);
-    });
+  list.innerHTML = "";
+  snap.forEach(r => {
+    const btn = document.createElement("button");
+    btn.className = "room-btn";
+    btn.textContent = r.key;
+    btn.onclick = () => joinRoom(r.key);
+    list.appendChild(btn);
   });
-}
+});
 
-function loadRoomInfo(room) {
-  const panel = document.getElementById("room-info-panel");
-  const bannedPanel = document.getElementById("banned-muted-panel");
-  if (!panel || !bannedPanel) return;
-
-  // Members
-  onValue(ref(db, `roomMembers/${room}`), snap => {
-    let members = [];
-    snap.forEach(userSnap => members.push(userSnap.key));
-    panel.innerHTML = `
-      <h3>Room: ${room}</h3>
-      <p>Users inside:</p>
-      <ul>${members.map(u => `<li>${u}</li>`).join("")}</ul>
-      <button onclick="joinRoom('${room}')">Join Room</button>
-    `;
-  });
-
-  // Banned/Muted
-  onValue(ref(db, `roomBans/${room}`), snap => {
-    let bans = [];
-    snap.forEach(snap => {
-      const val = snap.val();
-      const username = snap.key;
-      const color = val.global ? "grey" : "red";
-      bans.push(`<li style="color:${color}">${username}</li>`);
-    });
-    bannedPanel.innerHTML = `
-      <h4>Banned Users</h4>
-      <ul>${bans.join("")}</ul>
-    `;
-  });
-
-  onValue(ref(db, `roomMutes/${room}`), snap => {
-    let mutes = [];
-    snap.forEach(snap => {
-      const val = snap.val();
-      const username = snap.key;
-      const color = val.global ? "grey" : "yellow";
-      mutes.push(`<li style="color:${color}">${username}</li>`);
-    });
-    bannedPanel.innerHTML += `
-      <h4>Muted Users</h4>
-      <ul>${mutes.join("")}</ul>
-    `;
-  });
-}
-
-// -----------------
-// Online Users
-// -----------------
-function refreshOnlineUsers() {
+onValue(ref(db, "onlineUsers"), snap => {
   const ul = document.getElementById("online-users");
-  if (!ul) return;
-  onValue(ref(db, "onlineUsers"), snap => {
-    ul.innerHTML = "";
-    snap.forEach(userSnap => {
-      const u = userSnap.key;
-      const status = userSnap.val().status || "offline";
-      const li = document.createElement("li");
-      li.textContent = `${u} (${status})`;
-      li.style.color = status === "offline" ? "grey" : "green";
-      ul.appendChild(li);
-    });
+  ul.innerHTML = "";
+  snap.forEach(u => {
+    const li = document.createElement("li");
+    li.textContent = u.key;
+    ul.appendChild(li);
   });
-}
-
-// -----------------
-// On load
-// -----------------
-window.onload = () => {
-  if (!window.currentUser) {
-    window.location.href = "index.html";
-    return;
-  }
-  refreshTitleList();
-  loadRooms();
-  refreshOnlineUsers();
-};
+});
 </script>
-
-<script type="module" src="app.js"></script>
 </body>
 </html>
