@@ -1,13 +1,12 @@
 import { db } from './app.js';
-import { ref, push, set, onValue, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { ref, push, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
 const room = new URLSearchParams(window.location.search).get("room");
-document.getElementById("room-title").textContent = `Room: ${room}`;
-
 const messagesEl = document.getElementById("messages");
 const msgInput = document.getElementById("msg-input");
+document.getElementById("room-title").textContent = `Room: ${room}`;
 
-// Persistent dark mode
+// Dark mode
 if (localStorage.getItem("darkMode") === "true") document.body.classList.add("dark");
 window.toggleDarkMode = () => {
   document.body.classList.toggle("dark");
@@ -16,91 +15,81 @@ window.toggleDarkMode = () => {
 
 // Send message
 window.sendMessage = async () => {
-  const msg = msgInput.value.trim();
-  if (!msg) return;
+  const text = msgInput.value.trim();
+  if (!text) return;
   const mRef = push(ref(db, `messages/${room}`));
   await set(mRef, {
     user: window.currentUser.username,
-    text: msg,
+    text,
     timestamp: Date.now(),
     reactions: {}
   });
   msgInput.value = '';
 };
 
-// Listen to messages
+// Listen messages
 onValue(ref(db, `messages/${room}`), snap => {
   messagesEl.innerHTML = '';
   snap.forEach(m => {
     const data = m.val();
-    const msgDiv = document.createElement("div");
-    msgDiv.className = data.user === "[SYSTEM]" ? "system-msg" : "chat-msg";
-    msgDiv.dataset.key = m.key;
+    const div = document.createElement("div");
+    div.className = data.user === "[SYSTEM]" ? "system-msg" : "chat-msg";
+    div.dataset.key = m.key;
 
-    const usernameSpan = document.createElement("strong");
-    usernameSpan.textContent = data.user + ": ";
-    msgDiv.appendChild(usernameSpan);
+    const userSpan = document.createElement("strong");
+    userSpan.textContent = data.user + ": ";
+    div.appendChild(userSpan);
 
     const textSpan = document.createElement("span");
     textSpan.textContent = data.text;
-    msgDiv.appendChild(textSpan);
+    div.appendChild(textSpan);
 
-    // Edit button for own messages
+    // Edit
     if (data.user === window.currentUser.username && data.user !== "[SYSTEM]") {
       const editBtn = document.createElement("button");
       editBtn.textContent = "Edit";
       editBtn.className = "edit-btn";
-      editBtn.onclick = () => editMessage(m.key, data.text);
-      msgDiv.appendChild(editBtn);
+      editBtn.onclick = () => {
+        const newText = prompt("Edit message:", data.text);
+        if (newText) update(ref(db, `messages/${room}/${m.key}`), { text: newText });
+      };
+      div.appendChild(editBtn);
     }
 
     // Reactions
     if (data.user !== "[SYSTEM]") {
-      const reactionsDiv = document.createElement("span");
-      ["👍", "❤️", "😂"].forEach(emoji => {
+      const reactDiv = document.createElement("span");
+      ["👍","❤️","😂"].forEach(emoji => {
         const rBtn = document.createElement("button");
         rBtn.textContent = emoji + (data.reactions[emoji] || "");
         rBtn.className = "reaction-btn";
-        rBtn.onclick = () => addReaction(m.key, emoji);
-        reactionsDiv.appendChild(rBtn);
+        rBtn.onclick = async () => {
+          const rRef = ref(db, `messages/${room}/${m.key}/reactions/${emoji}`);
+          onValue(rRef, snap => set(rRef, (snap.val()||0)+1), {once:true});
+        };
+        reactDiv.appendChild(rBtn);
       });
-      msgDiv.appendChild(reactionsDiv);
+      div.appendChild(reactDiv);
     }
 
-    messagesEl.appendChild(msgDiv);
+    messagesEl.appendChild(div);
   });
   messagesEl.scrollTop = messagesEl.scrollHeight;
 });
 
-// Edit message
-const editMessage = (key, currentText) => {
-  const newText = prompt("Edit your message:", currentText);
-  if (!newText) return;
-  update(ref(db, `messages/${room}/${key}`), { text: newText });
-};
-
-// Add reaction
-const addReaction = async (key, emoji) => {
-  const refMsg = ref(db, `messages/${room}/${key}/reactions/${emoji}`);
-  onValue(refMsg, snap => {
-    const val = snap.val() || 0;
-    set(refMsg, val + 1);
-  }, { once: true });
-};
-
-// SYSTEM messages
-export const systemLog = async (text) => {
+// System logs
+export const systemLog = async text => {
   const sRef = push(ref(db, `messages/${room}`));
-  await set(sRef, { user: "[SYSTEM]", text, timestamp: Date.now(), reactions: {} });
+  await set(sRef, { user:"[SYSTEM]", text, timestamp:Date.now(), reactions:{} });
 };
 
-// Example: log when someone joins
+// Join / Leave
 window.joinRoom = async () => {
   await set(ref(db, `roomMembers/${room}/${window.currentUser.username}`), true);
   systemLog(`${window.currentUser.username} joined the room`);
 };
 window.leaveRoom = async () => {
-  await ref(db, `roomMembers/${room}/${window.currentUser.username}`).remove();
+  await remove(ref(db, `roomMembers/${room}/${window.currentUser.username}`));
   systemLog(`${window.currentUser.username} left the room`);
-  location.href = "dashboard.html";
+  location.href="dashboard.html";
 };

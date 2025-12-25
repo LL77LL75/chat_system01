@@ -1,7 +1,6 @@
 body {
   font-family: Arial, sans-serif;
-  margin: 0;
-  padding: 0;
+  margin:0; padding:0;
   background: #f4f4f4;
   color: #000;
 }
@@ -13,39 +12,35 @@ body.dark {
 
 .top-bar {
   display: flex;
-  gap: 5px;
-  padding: 8px;
-  background: #007BFF;
-  color: white;
+  justify-content: space-between;
   align-items: center;
+  padding: 5px 10px;
+  background: #007BFF;
+  color: #fff;
 }
 
-.top-bar button {
-  font-size: 0.8em;
-  padding: 4px 8px;
-  background: #0056b3;
-  border: none;
-  color: white;
-  border-radius: 4px;
+.top-buttons button {
+  margin-left: 5px;
+  font-size: 12px;
+  padding: 4px 6px;
+}
+
+.room-list button {
+  display: inline-block;
+  margin: 3px;
+  padding: 5px 10px;
   cursor: pointer;
 }
 
-.top-bar button:hover {
-  background: #004494;
-}
-
-.room-panel, .chat-box {
-  background: white;
+.room-panel {
+  background: #fff;
   margin: 10px;
   padding: 10px;
   border-radius: 6px;
-  overflow-y: auto;
-  max-height: 400px;
 }
 
-body.dark .room-panel, body.dark .chat-box {
+body.dark .room-panel {
   background: #1f1f1f;
-  color: #eee;
 }
 
 .popup {
@@ -68,46 +63,27 @@ body.dark .popup-content {
   color: #eee;
 }
 
-.chat-msg, .system-msg {
-  position: relative;
-  padding: 6px;
-  margin-bottom: 4px;
-  border-radius: 4px;
+.messages {
+  max-height: 70vh;
+  overflow-y: auto;
+  margin: 10px;
+  padding: 5px;
 }
 
 .chat-msg {
-  background: #eee;
-}
-
-body.dark .chat-msg {
-  background: #2a2a2a;
+  position: relative;
+  padding: 4px 6px;
+  border-bottom: 1px solid #ddd;
 }
 
 .system-msg {
   color: gray;
   font-style: italic;
+  text-align: center;
 }
 
-.delete-btn, .reaction-btn, .edit-btn {
-  margin-left: 5px;
-  font-size: 0.8em;
-  cursor: pointer;
-  background: #aaa;
-  border: none;
-  border-radius: 3px;
-  color: white;
-  padding: 2px 4px;
-}
-
-.delete-btn:hover, .reaction-btn:hover, .edit-btn:hover {
-  background: #888;
-}
-
-input#msg-input {
-  width: 80%;
-  padding: 6px;
-}
-
-form button {
-  padding: 6px 12px;
+.edit-btn, .reaction-btn {
+  margin-left: 4px;
+  font-size: 10px;
+  padding: 1px 3px;
 }
