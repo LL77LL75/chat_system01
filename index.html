@@ -1,59 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Dashboard</title>
-<link rel="icon" href="favicon.png">
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="center-screen">
 
-<header class="top-bar">
-  <h3>Dashboard</h3>
-  <div>
-    <button onclick="toggleDarkMode()">🌙</button>
-    <button onclick="openAccountPopup()">Account</button>
-    <button onclick="logout()">Logout</button>
-  </div>
-</header>
-
-<main class="dashboard-grid">
-  <section class="card">
-    <h4>Rooms</h4>
-    <div id="room-list"></div>
-  </section>
-
-  <section class="card">
-    <h4 id="room-title">Select a room</h4>
-
-    <div class="info-group">
-      <strong>Inside</strong>
-      <ul id="room-users"></ul>
-    </div>
-
-    <div class="info-group">
-      <strong>Banned</strong>
-      <ul id="room-banned"></ul>
-    </div>
-
-    <div class="info-group">
-      <strong>Muted</strong>
-      <ul id="room-muted"></ul>
-    </div>
-
-    <button id="join-room-btn" class="primary-btn" disabled>Join Room</button>
-  </section>
-</main>
-
-<!-- ACCOUNT POPUP -->
-<div id="account-popup" class="popup">
-  <div class="popup-content">
-    <h3>Account</h3>
-    <input id="displayname-input" placeholder="Display name">
-    <button onclick="changeDisplayName()">Save</button>
-    <button onclick="changePassword()">Change Password</button>
-    <button onclick="closeAccountPopup()">Close</button>
-  </div>
+<div class="card login-card">
+  <h2>Login</h2>
+  <form onsubmit="event.preventDefault(); normalLogin(user.value.trim(), pass.value.trim());">
+    <input id="user" placeholder="Username" required autocomplete="username">
+    <input id="pass" type="password" placeholder="Password" required autocomplete="current-password">
+    <button class="primary-btn">Login</button>
+  </form>
 </div>
 
 <script type="module" src="app.js"></script>
