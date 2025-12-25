@@ -120,3 +120,8 @@ body.dark .system-msg {
   background: #000;
   color: #aaa;
 }
+body.dark { background:#121212; color:#eee; }
+body.dark .chat-msg, body.dark .system-msg { background:#222; color:#eee; }
+.reaction-btn, .edit-btn { margin-left:5px; cursor:pointer; }
+.system-msg { color:gray; font-style:italic; }
+.chat-msg { position:relative; margin-bottom:4px; padding:4px; border-radius:4px; }
