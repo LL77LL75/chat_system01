@@ -4,12 +4,10 @@ body {
   background: #f4f4f4;
   color: #000;
 }
-
 body.dark {
   background: #121212;
   color: #eee;
 }
-
 .top-bar {
   display: flex;
   justify-content: space-between;
@@ -18,38 +16,32 @@ body.dark {
   background: #007BFF;
   color: #fff;
 }
-
 .top-buttons button {
   margin-left: 5px;
   font-size: 12px;
   padding: 4px 6px;
 }
-
 .room-list button {
   display: inline-block;
   margin: 3px;
   padding: 5px 10px;
   cursor: pointer;
 }
-
 .room-panel {
   background: #fff;
   margin: 10px;
   padding: 10px;
   border-radius: 6px;
 }
-
 body.dark .room-panel {
   background: #1f1f1f;
 }
-
 .popup {
   display: none;
   position: fixed;
   inset: 0;
   background: #0008;
 }
-
 .popup-content {
   background: white;
   width: 300px;
@@ -57,31 +49,26 @@ body.dark .room-panel {
   margin: 100px auto;
   border-radius: 6px;
 }
-
 body.dark .popup-content {
   background: #333;
   color: #eee;
 }
-
 .messages {
   max-height: 70vh;
   overflow-y: auto;
   margin: 10px;
   padding: 5px;
 }
-
 .chat-msg {
   position: relative;
   padding: 4px 6px;
   border-bottom: 1px solid #ddd;
 }
-
 .system-msg {
   color: gray;
   font-style: italic;
   text-align: center;
 }
-
 .edit-btn, .reaction-btn {
   margin-left: 4px;
   font-size: 10px;
