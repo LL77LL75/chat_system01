@@ -1,1 +1,45 @@
-lso update the top bar and chat so it looks like a compact blue header, small buttons in one line, fully persistent dark mode, and reaction/edit UI for messages all integrated.
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="top-bar">
+  <button onclick="toggleDarkMode()">🌓</button>
+  <button onclick="openAccountPopup()">Account</button>
+  <button onclick="logout()">Logout</button>
+  <button onclick="addRoom()">Add Room</button>
+</div>
+
+<h3>Rooms</h3>
+<div id="room-list" class="room-list"></div>
+
+<div id="room-info-panel" class="room-panel">
+  <button id="delete-room-btn" onclick="deleteRoom()" style="display:none;">Delete Room</button>
+</div>
+
+<!-- ACCOUNT POPUP -->
+<div id="account-popup" class="popup">
+  <div class="popup-content">
+    <h3>Account Settings</h3>
+    <label>Display Name:</label>
+    <input id="displayname-input" />
+    <button onclick="changeDisplayName()">Save</button>
+    <br><br>
+    <button onclick="changePassword()">Change Password</button>
+    <br><br>
+    <label>Active Title:</label>
+    <select id="title-select"></select>
+    <button onclick="setActiveTitle()">Equip Title</button>
+    <br><br>
+    <button id="create-account-btn" onclick="createNewAccount()">Create New Account (core+)</button>
+    <br><br>
+    <button onclick="closeAccountPopup()">Close</button>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
