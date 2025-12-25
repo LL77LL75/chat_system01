@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>Dashboard</title>
+<link rel="icon" href="favicon.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header class="top-bar">
-  <h2>Dashboard</h2>
-  <div class="top-actions">
+  <h3>Dashboard</h3>
+  <div>
     <button onclick="toggleDarkMode()">🌙</button>
-    <button onclick="openUserList()">Users</button>
     <button onclick="openAccountPopup()">Account</button>
     <button onclick="logout()">Logout</button>
   </div>
@@ -19,71 +19,32 @@
 
 <main class="dashboard-grid">
   <section class="card">
-    <h3>Rooms</h3>
-    <div id="room-list" class="room-list"></div>
+    <h4>Rooms</h4>
+    <div id="room-list"></div>
   </section>
 
   <section class="card">
-    <div id="room-info-panel"></div>
-    <div id="banned-muted-panel"></div>
+    <h4 id="room-title">Select a room</h4>
+
+    <div class="info-group">
+      <strong>Inside</strong>
+      <ul id="room-users"></ul>
+    </div>
+
+    <div class="info-group">
+      <strong>Banned</strong>
+      <ul id="room-banned"></ul>
+    </div>
+
+    <div class="info-group">
+      <strong>Muted</strong>
+      <ul id="room-muted"></ul>
+    </div>
+
+    <button id="join-room-btn" class="primary-btn" disabled>Join Room</button>
   </section>
 </main>
 
-<!-- ACCOUNT -->
-<div id="account-popup" class="popup">
-  <div class="popup-content">
-    <h3>Account Settings</h3>
-
-    <input id="displayname-input" placeholder="Display Name">
-    <button onclick="changeDisplayName()">Save</button>
-
-    <button onclick="changePassword()">Change Password</button>
-
-    <select id="title-select"></select>
-    <button onclick="setActiveTitle()">Equip Title</button>
-
-    <button onclick="createNewAccount()">Create Account (core+)</button>
-    <button onclick="closeAccountPopup()">Close</button>
-  </div>
-</div>
-
-<!-- USER LIST -->
-<div id="user-list-panel" class="popup">
-  <div class="popup-content">
-    <h3>Online Users</h3>
-    <ul id="online-users"></ul>
-    <button onclick="closeUserList()">Close</button>
-  </div>
-</div>
-
 <script type="module" src="app.js"></script>
-<script type="module">
-import { db } from "./app.js";
-import { ref, onValue } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
-
-if (!window.currentUser) location.href = "index.html";
-
-onValue(ref(db, "rooms"), snap => {
-  const list = document.getElementById("room-list");
-  list.innerHTML = "";
-  snap.forEach(r => {
-    const btn = document.createElement("button");
-    btn.className = "room-btn";
-    btn.textContent = r.key;
-    btn.onclick = () => joinRoom(r.key);
-    list.appendChild(btn);
-  });
-});
-
-onValue(ref(db, "onlineUsers"), snap => {
-  const ul = document.getElementById("online-users");
-  ul.innerHTML = "";
-  snap.forEach(u => {
-    const li = document.createElement("li");
-    li.textContent = u.key;
-    ul.appendChild(li);
-  });
-});
-</script>
 </body>
 </html>
