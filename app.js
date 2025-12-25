@@ -1,116 +1,101 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getDatabase, ref, get, set, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
-import { firebaseConfig } from "./firebase-config.js";
+import { getDatabase, ref, set, push, remove, onValue, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
+const firebaseConfig = {
+  apiKey: "YOUR_KEY",
+  authDomain: "YOUR_DOMAIN",
+  databaseURL: "YOUR_DB_URL",
+  projectId: "YOUR_PROJECT_ID",
+};
 const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
-window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 
-// Persistent Dark Mode
-if (localStorage.getItem("darkMode") === "true") document.body.classList.add("dark");
-
+// Dark mode
+if(localStorage.getItem("darkMode")==="true") document.body.classList.add("dark");
 window.toggleDarkMode = () => {
   document.body.classList.toggle("dark");
   localStorage.setItem("darkMode", document.body.classList.contains("dark"));
 };
 
-// Login/logout
-window.normalLogin = async (username, password) => {
-  const snap = await get(ref(db, `users/${username}`));
-  if (!snap.exists()) return alert("User not found");
-  const u = snap.val();
-  if (u.password !== password) return alert("Wrong password");
-  window.currentUser = { username, ...u };
-  localStorage.setItem("currentUser", JSON.stringify(window.currentUser));
-  location.href = "dashboard.html";
-};
-window.logout = () => { localStorage.removeItem("currentUser"); location.href="index.html"; };
+// User info placeholder
+window.currentUser = { username:"User1", isAdmin:true };
+
+// Account popup
+window.openAccountPopup = ()=>document.getElementById("account-popup").style.display="block";
+window.closeAccountPopup = ()=>document.getElementById("account-popup").style.display="none";
 
 // Rooms
-window.loadRooms = () => {
-  const list = document.getElementById("room-list");
-  if (!list) return;
-  onValue(ref(db, "rooms"), snap => {
-    list.innerHTML = "";
-    snap.forEach(r => {
+const roomList = document.getElementById("room-list");
+const roomInfoPanel = document.getElementById("room-info-panel");
+const usersInside = document.getElementById("users-inside");
+const usersBanned = document.getElementById("users-banned");
+const usersMuted = document.getElementById("users-muted");
+
+export async function loadRooms() {
+  onValue(ref(db, "rooms"), snap=>{
+    roomList.innerHTML="";
+    snap.forEach(r=>{
       const btn = document.createElement("button");
-      btn.textContent = r.key;
-      btn.onclick = () => window.loadRoomInfo(r.key);
-      list.appendChild(btn);
+      btn.textContent=r.key;
+      btn.onclick=()=>loadRoomInfo(r.key);
+      roomList.appendChild(btn);
+    });
+  });
+}
+
+window.addRoom = async () => {
+  if(!window.currentUser.isAdmin) return alert("Admin only");
+  const name=prompt("Room name:");
+  if(name) await set(ref(db, `rooms/${name}`), true);
+};
+
+window.deleteRoom = async () => {
+  if(!window.currentUser.isAdmin) return alert("Admin only");
+  const roomName = document.getElementById("current-room-title").textContent;
+  if(roomName && confirm("Delete room?")) await remove(ref(db, `rooms/${roomName}`));
+  roomInfoPanel.style.display="none";
+};
+
+// Load info
+window.loadRoomInfo = (roomName)=>{
+  document.getElementById("current-room-title").textContent=roomName;
+  roomInfoPanel.style.display="block";
+  const membersRef = ref(db, `roomMembers/${roomName}`);
+  onValue(membersRef, snap=>{
+    usersInside.innerHTML="<strong>Inside:</strong>";
+    snap.forEach(u=>{
+      const li=document.createElement("li");
+      li.textContent=u.key;
+      if(window.currentUser.isAdmin){
+        const mute = document.createElement("button"); mute.textContent="Mute"; mute.onclick=()=>muteUser(roomName,u.key);
+        const ban = document.createElement("button"); ban.textContent="Ban"; ban.onclick=()=>banUser(roomName,u.key);
+        li.appendChild(mute); li.appendChild(ban);
+      }
+      usersInside.appendChild(li);
     });
   });
 };
 
-window.addRoom = async () => {
-  const room = prompt("New Room Name:");
-  if (!room) return;
-  await set(ref(db, `rooms/${room}`), true);
-  alert(`Room "${room}" added`);
+// Mute/ban
+window.muteUser = async (room,user)=>update(ref(db,`muted/${room}/${user}`),true);
+window.banUser = async (room,user)=>{
+  await update(ref(db,`banned/${room}/${user}`),true);
+  await remove(ref(db,`roomMembers/${room}/${user}`));
 };
 
-window.loadRoomInfo = async (room) => {
-  const panel = document.getElementById("room-info-panel");
-  panel.innerHTML = "";
-  // Members
-  const membersSnap = await get(ref(db, `roomMembers/${room}`));
-  let membersList = "";
-  membersSnap.forEach(u => membersList += `<li>${u.key}</li>`);
-
-  const bansSnap = await get(ref(db, `roomBans/${room}`));
-  let bannedList = "";
-  bansSnap.forEach(u => bannedList += `<li>${u.key}</li>`);
-
-  const mutesSnap = await get(ref(db, `roomMutes/${room}`));
-  let mutedList = "";
-  mutesSnap.forEach(u => mutedList += `<li>${u.key}</li>`);
-
-  panel.innerHTML = `
-    <h3>Room: ${room}</h3>
-    <p>Users inside:</p><ul>${membersList}</ul>
-    <p>Banned users:</p><ul>${bannedList}</ul>
-    <p>Muted users:</p><ul>${mutedList}</ul>
-    <button onclick="joinRoom('${room}')">Join Room</button>
-  `;
-
-  // Admin+ delete button
-  const deleteBtn = document.getElementById("delete-room-btn");
-  if (["admin","high","core","pioneer"].includes(window.currentUser.rank)) {
-    deleteBtn.style.display = "inline-block";
-    deleteBtn.dataset.room = room;
-  } else {
-    deleteBtn.style.display = "none";
-  }
+// Join room
+window.joinRoom = async ()=>{
+  const roomName = document.getElementById("current-room-title").textContent;
+  if(!roomName) return;
+  await set(ref(db, `roomMembers/${roomName}/${window.currentUser.username}`), true);
+  systemLog(roomName,`${window.currentUser.username} joined the room`);
 };
 
-window.deleteRoom = async () => {
-  const btn = document.getElementById("delete-room-btn");
-  const room = btn.dataset.room;
-  if (!room) return;
-  if (!confirm(`Delete room "${room}"? All messages and members will be removed.`)) return;
+// System logs
+export async function systemLog(room,msg){
+  const sRef=push(ref(db,`messages/${room}`));
+  await set(sRef,{user:"[SYSTEM]",text:msg,timestamp:Date.now(),reactions:{}});
+}
 
-  await remove(ref(db, `rooms/${room}`));
-  await remove(ref(db, `roomMembers/${room}`));
-  await remove(ref(db, `messages/${room}`));
-  await remove(ref(db, `roomBans/${room}`));
-  await remove(ref(db, `roomMutes/${room}`));
-  alert(`Room "${room}" deleted`);
-  document.getElementById("room-info-panel").innerHTML = "";
-};
-
-// Account popup
-window.openAccountPopup = () => {
-  const p = document.getElementById("account-popup");
-  if (!p || !window.currentUser) return;
-  document.getElementById("displayname-input").value = window.currentUser.displayName || "";
-  const sel = document.getElementById("title-select");
-  sel.innerHTML = "";
-  const titles = window.currentUser.titles || {};
-  Object.keys(titles).forEach(t => {
-    const opt=document.createElement("option");
-    opt.value=t; opt.textContent=t;
-    sel.appendChild(opt);
-  });
-  if (window.currentUser.activeTitle) sel.value = window.currentUser.activeTitle;
-  p.style.display="block";
-};
-window.closeAccountPopup = () => { const p=document.getElementById("account-popup"); if(p)p.style.display="none"; };
+// Initial load
+loadRooms();
