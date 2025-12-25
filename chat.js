@@ -6,7 +6,7 @@ import {
 const room = new URLSearchParams(location.search).get("room");
 if (!room || !window.currentUser) location.href = "dashboard.html";
 
-const user = currentUser.username;
+const user = window.currentUser.username;
 document.getElementById("room-title").textContent = room;
 
 const memberRef = ref(db, `roomMembers/${room}/${user}`);
@@ -16,11 +16,12 @@ onDisconnect(memberRef).remove();
 /* ---------- SEND ---------- */
 window.sendMessage = async () => {
   const input = document.getElementById("msg-input");
-  if (!input.value.trim()) return;
+  const text = input.value.trim();
+  if (!text) return;
 
   await push(ref(db, `messages/${room}`), {
     sender: user,
-    text: input.value,
+    text: text,
     time: Date.now(),
     reactions: {}
   });

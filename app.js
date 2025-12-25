@@ -6,15 +6,14 @@ import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
-
 window.currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 
-/* ---------- LOGIN GUARD ---------- */
-if (!window.currentUser && location.pathname.includes("dashboard")) {
-  location.href = "index.html";
+// Restore dark mode
+if (localStorage.getItem("darkMode") === "1") {
+  document.body.classList.add("dark");
 }
 
-/* ---------- AUTH ---------- */
+// LOGIN
 window.normalLogin = async (u, p) => {
   const snap = await get(ref(db, `users/${u}`));
   if (!snap.exists() || snap.val().password !== p) {
@@ -26,15 +25,22 @@ window.normalLogin = async (u, p) => {
   location.href = "dashboard.html";
 };
 
+// LOGOUT
 window.logout = () => {
   localStorage.removeItem("currentUser");
   location.href = "index.html";
 };
 
-/* ---------- DARK MODE ---------- */
-window.toggleDarkMode = () => document.body.classList.toggle("dark");
+// DARK MODE
+window.toggleDarkMode = () => {
+  document.body.classList.toggle("dark");
+  localStorage.setItem(
+    "darkMode",
+    document.body.classList.contains("dark") ? "1" : "0"
+  );
+};
 
-/* ---------- ACCOUNT POPUP ---------- */
+// ACCOUNT POPUP
 window.openAccountPopup = () => {
   document.getElementById("account-popup").style.display = "block";
 };
@@ -42,6 +48,7 @@ window.closeAccountPopup = () => {
   document.getElementById("account-popup").style.display = "none";
 };
 
+// CHANGE DISPLAYNAME / PASSWORD
 window.changeDisplayName = async () => {
   const val = document.getElementById("displayname-input").value.trim();
   if (!val) return;
@@ -56,14 +63,7 @@ window.changePassword = async () => {
   await update(ref(db, `users/${currentUser.username}`), { password: pw });
 };
 
-/* ---------- PERMISSIONS ---------- */
-window.canMute = () =>
-  ["admin","high","core","pioneer"].includes(currentUser.rank);
-
-window.canBan = () =>
-  ["high","core","pioneer"].includes(currentUser.rank);
-
-/* ---------- ROOMS ---------- */
+// ROOMS
 let selectedRoom = null;
 
 onValue(ref(db, "rooms"), snap => {
@@ -117,6 +117,7 @@ window.loadRoomInfo = room => {
   });
 };
 
+// JOIN ROOM
 document.getElementById("join-room-btn")?.addEventListener("click", async () => {
   if (!currentUser || !selectedRoom) return;
   const u = currentUser.username;
