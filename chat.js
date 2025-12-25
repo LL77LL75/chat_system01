@@ -1,5 +1,5 @@
 import { db } from "./app.js";
-import { ref, push, set, onValue, remove, onDisconnect, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { ref, push, set, onValue, remove, onDisconnect, get, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
 const params = new URLSearchParams(window.location.search);
 const room = params.get("room");
@@ -41,8 +41,7 @@ window.sendMessage = async function() {
     if(!(await checkBanMute())) return;
 
     const msgRef = push(ref(db, `messages/${room}`));
-    await set(msgRef, { sender: username, text, title: window.currentUser.activeTitle||"", time:Date.now() });
-
+    await set(msgRef, { sender: username, text, title: window.currentUser.activeTitle||"", time:Date.now(), reactions:{} });
     input.value = "";
 };
 
@@ -59,22 +58,27 @@ onValue(ref(db, `messages/${room}`), snap => {
 
         // Post-message actions
         if(!m.system){
-            // Reaction button
-            const reactBtn = document.createElement("button");
-            reactBtn.textContent = "❤️";
-            reactBtn.className = "reaction-btn";
-            reactBtn.onclick = async () => {
-                await push(ref(db, `messages/${room}/${msgSnap.key}/reactions`), { user:username, emoji:"❤️" });
-            };
-            div.appendChild(reactBtn);
+            // Reactions
+            const emojis = ["❤️","👍","😂"];
+            emojis.forEach(e => {
+                const reactBtn = document.createElement("button");
+                reactBtn.textContent = e + (m.reactions && m.reactions[e] ? ` (${Object.keys(m.reactions[e]).length})` : "");
+                reactBtn.onclick = async () => {
+                    const path = ref(db, `messages/${room}/${msgSnap.key}/reactions/${e}/${username}`);
+                    const snap = await get(path);
+                    if(snap.exists()) remove(path);
+                    else set(path, true);
+                };
+                div.appendChild(reactBtn);
+            });
 
-            // Edit button for own messages
+            // Edit button
             if(m.sender === username){
                 const editBtn = document.createElement("button");
                 editBtn.textContent = "✏️";
                 editBtn.onclick = async () => {
                     const newText = prompt("Edit message:", m.text);
-                    if(newText) await set(ref(db, `messages/${room}/${msgSnap.key}/text`), newText);
+                    if(newText) await update(ref(db, `messages/${room}/${msgSnap.key}`), { text:newText });
                 };
                 div.appendChild(editBtn);
             }
@@ -84,7 +88,3 @@ onValue(ref(db, `messages/${room}`), snap => {
     });
     msgBox.scrollTop = msgBox.scrollHeight;
 });
-
-// Account popup
-window.openAccountPopup = () => document.getElementById("account-popup").style.display="block";
-window.closeAccountPopup = () => document.getElementById("account-popup").style.display="none";
