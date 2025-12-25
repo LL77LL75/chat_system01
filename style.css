@@ -6,7 +6,7 @@ body {
 
 body.dark {
   background: #121212;
-  color: #eee;
+  color: #e5e5e5;
 }
 
 .center-screen {
@@ -95,4 +95,28 @@ input, button {
   margin: 100px auto;
   padding: 20px;
   width: 300px;
+}
+
+/* Dark mode overrides */
+body.dark .card,
+body.dark .popup-content,
+body.dark .chat-msg {
+  background: #1e1e1e;
+  color: #e5e5e5;
+}
+
+body.dark input,
+body.dark button {
+  background: #2a2a2a;
+  color: #e5e5e5;
+  border: 1px solid #444;
+}
+
+body.dark .top-bar {
+  background: #000;
+}
+
+body.dark .system-msg {
+  background: #000;
+  color: #aaa;
 }
