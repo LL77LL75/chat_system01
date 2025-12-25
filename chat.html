@@ -1,38 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Chat Room</title>
-  <link rel="stylesheet" href="style.css">
+    <title>Chat Room</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
 <div class="top-bar">
-  <button onclick="toggleDarkMode()">🌓</button>
-  <button onclick="openAccountPopup()">Account</button>
-  <button onclick="leaveRoom()">Leave Room</button>
+  <span id="room-title"></span>
+  <div class="top-buttons">
+    <button onclick="openAccountPopup()">Account</button>
+    <button onclick="leaveRoom()">Leave Room</button>
+    <button onclick="toggleDarkMode()">Dark Mode</button>
+  </div>
 </div>
 
-<h2 id="room-title"></h2>
-
-<div id="messages" class="chat-box"></div>
+<div id="messages" class="messages"></div>
 
 <form onsubmit="event.preventDefault(); sendMessage();">
-  <input id="msg-input" placeholder="Type message..." autocomplete="off">
-  <button type="submit">Send</button>
+    <input id="msg-input" placeholder="Type message..." autocomplete="off">
+    <button type="submit">Send</button>
 </form>
 
 <!-- ACCOUNT POPUP -->
 <div id="account-popup" class="popup">
-  <div class="popup-content">
-    <h3>Account</h3>
-    <label>Display Name:</label>
-    <input id="displayname-input">
-    <button onclick="changeDisplayName()">Save</button>
-    <br><br>
-    <button onclick="changePassword()">Change Password</button>
-    <br><br>
-    <button onclick="closeAccountPopup()">Close</button>
-  </div>
+    <div class="popup-content">
+        <h3>Account</h3>
+        <label>Display Name:</label>
+        <input id="displayname-input">
+        <button onclick="changeDisplayName()">Save</button>
+        <br><br>
+        <button onclick="changePassword()">Change Password</button>
+        <br><br>
+        <button onclick="closeAccountPopup()">Close</button>
+    </div>
 </div>
 
 <script type="module" src="chat.js"></script>
