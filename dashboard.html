@@ -1,43 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Dashboard</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body onload="loadRooms()">
 
-<!-- Top Blue Bar -->
-<div class="top-bar">
-  <button onclick="window.logout()">Logout</button>
-  <button onclick="window.openAccountPopup()">Account</button>
-  <button onclick="window.toggleDarkMode()">Dark Mode</button>
-  <button onclick="window.addRoom()">Add Room</button>
-</div>
-
-<h2>Rooms</h2>
-<div id="room-list"></div>
-
-<div id="room-info-panel" class="room-panel"></div>
-
-<!-- ACCOUNT POPUP -->
-<div id="account-popup" class="popup">
-  <div class="popup-content">
-    <h3>Account Settings</h3>
-    <label>Display Name:</label>
-    <input id="displayname-input" />
-    <button onclick="window.changeDisplayName()">Save Display Name</button>
-    <br><br>
-    <button onclick="window.changePassword()">Change Password</button>
-    <br><br>
-    <label>Active Title:</label>
-    <select id="title-select"></select>
-    <button onclick="window.setActiveTitle()">Equip Title</button>
-    <br><br>
-    <button onclick="window.closeAccountPopup()">Close</button>
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <button onclick="openAccountPopup()">Account</button>
+    <button onclick="toggleDarkMode()">🌙</button>
+    <button onclick="logout()">Leave</button>
   </div>
-</div>
 
-<script type="module" src="app.js"></script>
+  <!-- ROOMS -->
+  <div class="section">
+    <h3>Rooms</h3>
+    <div id="room-list" class="room-list"></div>
+    <button class="add-room-btn" onclick="addRoom()">＋ Add Room</button>
+  </div>
+
+  <!-- INFO PANEL -->
+  <div id="room-info-panel" class="info-panel">
+    <em>Select a room to see info</em>
+  </div>
+
+  <!-- ACCOUNT POPUP -->
+  <div id="account-popup" class="popup">
+    <h3>Account</h3>
+    <input id="displayname-input" placeholder="Display name" />
+    <button onclick="changeDisplayName()">Save</button>
+    <button onclick="closeAccountPopup()">Close</button>
+  </div>
+
+  <script type="module" src="app.js"></script>
 </body>
 </html>

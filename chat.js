@@ -1,51 +1,74 @@
 import { db } from "./app.js";
-import { ref, push, onValue, set, remove, onDisconnect, get } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import {
+  ref, push, onValue, update, remove
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-const params = new URLSearchParams(window.location.search);
-const room = params.get("room");
-const msgBox = document.getElementById("messages");
+const room = new URLSearchParams(location.search).get("room");
+const box = document.getElementById("messages");
 const input = document.getElementById("msg-input");
-const titleEl = document.getElementById("room-title");
+const user = window.currentUser.username;
 
-if (!room || !window.currentUser) location.href = "dashboard.html";
+/* 📩 SEND MESSAGE */
+window.sendMessage = async () => {
+  if (!input.value.trim()) return;
 
-titleEl.textContent = "Room: " + room;
-const username = window.currentUser.username;
-
-// Join room
-const memberRef = ref(db, `members/${room}/${username}`);
-set(memberRef, { joinedAt: Date.now() });
-onDisconnect(memberRef).remove();
-push(ref(db, `messages/${room}`), { system: true, text:`[SYSTEM] ${username} joined the room.`, time: Date.now() });
-
-// Leave room
-window.leaveRoom = async function() {
-  await push(ref(db, `messages/${room}`), { system: true, text:`[SYSTEM] ${username} left the room.`, time: Date.now() });
-  await remove(memberRef);
-  location.href = "dashboard.html";
-};
-
-// Send message
-window.sendMessage = async function() {
-  const text = input.value.trim();
-  if (!text) return;
-  await push(ref(db, `messages/${room}`), { sender: username, text, time: Date.now() });
+  await push(ref(db, `messages/${room}`), {
+    user,
+    text: input.value,
+    time: Date.now(),
+    reactions: {}
+  });
   input.value = "";
 };
 
-// Listen for messages
+/* 📡 RECEIVE */
 onValue(ref(db, `messages/${room}`), snap => {
-  msgBox.innerHTML = "";
-  snap.forEach(msgSnap => {
-    const m = msgSnap.val();
+  box.innerHTML = "";
+  snap.forEach(m => {
+    const d = m.val();
     const div = document.createElement("div");
-    div.className = m.system ? "system-msg" : "chat-msg";
-    div.textContent = m.system ? m.text : `${m.sender}: ${m.text}`;
-    msgBox.appendChild(div);
+
+    div.className = d.system ? "system-msg" : "chat-msg";
+    div.innerHTML = d.system
+      ? d.text
+      : `<b>${d.user}</b>: ${d.text}`;
+
+    /* ✏️ EDIT OWN MESSAGE */
+    if (d.user === user && !d.system) {
+      const e = document.createElement("button");
+      e.textContent = "Edit";
+      e.onclick = () => {
+        const t = prompt("Edit message:", d.text);
+        if (t) update(ref(db, `messages/${room}/${m.key}`), { text: t });
+      };
+      div.appendChild(e);
+    }
+
+    /* 👍 REACTIONS */
+    if (!d.system) {
+      ["👍","❤️","😂"].forEach(r => {
+        const b = document.createElement("button");
+        b.textContent = r;
+        b.onclick = () =>
+          update(ref(db, `messages/${room}/${m.key}/reactions/${r}`), {
+            [user]: true
+          });
+        div.appendChild(b);
+      });
+    }
+
+    box.appendChild(div);
   });
-  msgBox.scrollTop = msgBox.scrollHeight;
+  box.scrollTop = box.scrollHeight;
 });
 
-// Account popup
-window.openAccountPopup = () => document.getElementById("account-popup").style.display = "block";
-window.closeAccountPopup = () => document.getElementById("account-popup").style.display = "none";
+/* 🚪 LEAVE */
+window.leaveRoom = () => {
+  push(ref(db, `messages/${room}`), {
+    system: true,
+    text: `[SYSTEM] ${user} left`,
+    time: Date.now()
+  });
+  remove(ref(db, `roomMembers/${room}/${user}`));
+  location.href = "dashboard.html";
+};
