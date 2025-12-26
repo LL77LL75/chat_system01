@@ -1,42 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Chat Room</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Chat</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<!-- Top Blue Bar -->
-<div class="top-bar">
-  <button onclick="window.leaveRoom()">Leave Room</button>
-  <button onclick="window.openAccountPopup()">Account</button>
-  <button onclick="window.toggleDarkMode()">Dark Mode</button>
-</div>
-
-<h2 id="room-title"></h2>
-<div id="messages" class="chat-messages"></div>
-
-<form onsubmit="window.sendMessage(); return false;">
-  <input id="msg-input" placeholder="Type message..." autocomplete="off" />
-  <button type="submit">Send</button>
-</form>
-
-<!-- ACCOUNT POPUP -->
-<div id="account-popup" class="popup">
-  <div class="popup-content">
-    <h3>Account</h3>
-    <label>Display Name:</label>
-    <input id="displayname-input">
-    <button onclick="window.changeDisplayName()">Save</button>
-    <br><br>
-    <button onclick="window.changePassword()">Change Password</button>
-    <br><br>
-    <button onclick="window.closeAccountPopup()">Close</button>
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <button onclick="leaveRoom()">← Leave</button>
+    <span class="room-title">Chat</span>
+    <button onclick="toggleDarkMode()">🌙</button>
   </div>
-</div>
 
-<script type="module" src="chat.js"></script>
-<script type="module" src="app.js"></script>
+  <!-- MESSAGES -->
+  <div id="messages" class="messages"></div>
+
+  <!-- INPUT -->
+  <form class="input-bar" onsubmit="sendMessage(); return false;">
+    <input id="msg-input" placeholder="Message..." autocomplete="off" />
+    <button type="submit">Send</button>
+  </form>
+
+  <script type="module" src="chat.js"></script>
 </body>
 </html>
