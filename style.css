@@ -1,76 +1,67 @@
 body {
-  font-family: Arial, sans-serif;
-  margin:0; padding:0;
-  background: #f4f4f4;
-  color: #000;
+  margin: 0;
+  font-family: sans-serif;
+  background: #f5f5f5;
 }
+
 body.dark {
-  background: #121212;
+  background: #111;
   color: #eee;
 }
+
 .top-bar {
+  background: #1e88e5;
+  color: white;
+  padding: 6px;
   display: flex;
-  justify-content: space-between;
+  gap: 6px;
   align-items: center;
-  padding: 5px 10px;
-  background: #007BFF;
-  color: #fff;
 }
-.top-buttons button {
-  margin-left: 5px;
+
+.top-bar button {
   font-size: 12px;
-  padding: 4px 6px;
+  padding: 4px 8px;
 }
+
 .room-list button {
-  display: inline-block;
-  margin: 3px;
-  padding: 5px 10px;
-  cursor: pointer;
+  margin: 4px;
 }
-.room-panel {
-  background: #fff;
-  margin: 10px;
+
+.messages {
   padding: 10px;
-  border-radius: 6px;
+  height: calc(100vh - 100px);
+  overflow-y: auto;
 }
-body.dark .room-panel {
-  background: #1f1f1f;
+
+.chat-msg {
+  margin-bottom: 6px;
 }
+
+.system-msg {
+  color: #888;
+  font-style: italic;
+  margin: 6px 0;
+}
+
+.input-bar {
+  display: flex;
+  padding: 6px;
+  background: #ddd;
+}
+
+body.dark .input-bar {
+  background: #222;
+}
+
 .popup {
   display: none;
   position: fixed;
-  inset: 0;
-  background: #0008;
-}
-.popup-content {
   background: white;
-  width: 300px;
-  padding: 20px;
-  margin: 100px auto;
-  border-radius: 6px;
+  padding: 10px;
+  top: 30%;
+  left: 30%;
 }
-body.dark .popup-content {
-  background: #333;
-  color: #eee;
-}
-.messages {
-  max-height: 70vh;
-  overflow-y: auto;
-  margin: 10px;
-  padding: 5px;
-}
-.chat-msg {
-  position: relative;
-  padding: 4px 6px;
-  border-bottom: 1px solid #ddd;
-}
-.system-msg {
-  color: gray;
-  font-style: italic;
-  text-align: center;
-}
-.edit-btn, .reaction-btn {
-  margin-left: 4px;
-  font-size: 10px;
-  padding: 1px 3px;
+
+body.dark .popup {
+  background: #222;
 }

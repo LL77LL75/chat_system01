@@ -8,20 +8,18 @@ const box = document.getElementById("messages");
 const input = document.getElementById("msg-input");
 const user = window.currentUser.username;
 
-/* 📩 SEND MESSAGE */
+/* SEND */
 window.sendMessage = async () => {
   if (!input.value.trim()) return;
-
   await push(ref(db, `messages/${room}`), {
     user,
     text: input.value,
-    time: Date.now(),
-    reactions: {}
+    time: Date.now()
   });
   input.value = "";
 };
 
-/* 📡 RECEIVE */
+/* RECEIVE */
 onValue(ref(db, `messages/${room}`), snap => {
   box.innerHTML = "";
   snap.forEach(m => {
@@ -33,7 +31,7 @@ onValue(ref(db, `messages/${room}`), snap => {
       ? d.text
       : `<b>${d.user}</b>: ${d.text}`;
 
-    /* ✏️ EDIT OWN MESSAGE */
+    /* EDIT */
     if (d.user === user && !d.system) {
       const e = document.createElement("button");
       e.textContent = "Edit";
@@ -44,15 +42,13 @@ onValue(ref(db, `messages/${room}`), snap => {
       div.appendChild(e);
     }
 
-    /* 👍 REACTIONS */
+    /* REACTIONS */
     if (!d.system) {
       ["👍","❤️","😂"].forEach(r => {
         const b = document.createElement("button");
         b.textContent = r;
         b.onclick = () =>
-          update(ref(db, `messages/${room}/${m.key}/reactions/${r}`), {
-            [user]: true
-          });
+          update(ref(db, `messages/${room}/${m.key}/reactions/${r}/${user}`), true);
         div.appendChild(b);
       });
     }
@@ -62,7 +58,7 @@ onValue(ref(db, `messages/${room}`), snap => {
   box.scrollTop = box.scrollHeight;
 });
 
-/* 🚪 LEAVE */
+/* LEAVE */
 window.leaveRoom = () => {
   push(ref(db, `messages/${room}`), {
     system: true,
