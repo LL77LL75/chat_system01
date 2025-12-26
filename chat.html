@@ -1,28 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Chat</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- TOP BAR -->
-  <div class="top-bar">
-    <button onclick="leaveRoom()">← Leave</button>
-    <span class="room-title">Chat</span>
-    <button onclick="toggleDarkMode()">🌙</button>
-  </div>
+<div class="top-bar">
+  <button onclick="leaveRoom()">←</button>
+  <span id="room-title"></span>
+  <button onclick="toggleDarkMode()">🌙</button>
+</div>
 
-  <!-- MESSAGES -->
-  <div id="messages" class="messages"></div>
+<div class="panel" id="info-panel">
+  <h3>Room Info</h3>
+  <strong>Inside</strong>
+  <ul id="inside-list"></ul>
+  <strong>Muted</strong>
+  <ul id="muted-list"></ul>
+  <strong>Banned</strong>
+  <ul id="banned-list"></ul>
+</div>
 
-  <!-- INPUT -->
-  <form class="input-bar" onsubmit="sendMessage(); return false;">
-    <input id="msg-input" placeholder="Message..." autocomplete="off" />
-    <button type="submit">Send</button>
-  </form>
+<div id="messages" class="messages"></div>
 
-  <script type="module" src="chat.js"></script>
+<div id="autocomplete"></div>
+
+<form class="input-bar" onsubmit="sendMessage(); return false;">
+  <input id="msg-input" autocomplete="off">
+  <button>Send</button>
+</form>
+
+<script type="module" src="chat.js"></script>
 </body>
 </html>
