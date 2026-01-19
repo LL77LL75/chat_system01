@@ -1,13 +1,23 @@
 import { db } from "./app.js";
 import {
-  ref, push, onValue, set, remove, get
+  ref,
+  push,
+  onValue,
+  set,
+  remove,
+  get,
+  query,
+  limitToLast
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
 /* ---------- INIT ---------- */
 const room = new URLSearchParams(location.search).get("room");
 const user = window.currentUser;
 
-if (!user || !room) location.href = "dashboard.html";
+if (!user || !room) {
+  alert("Session expired");
+  location.replace("index.html");
+}
 
 document.getElementById("room-title").textContent = room;
 
@@ -33,18 +43,34 @@ const COMMAND_LEVEL = {
 
 const can = cmd => myLevel >= COMMAND_LEVEL[cmd];
 
+/* ---------- LISTENER MANAGEMENT ---------- */
+const unsubscribers = [];
+const listen = (r, cb) => {
+  const unsub = onValue(r, cb);
+  unsubscribers.push(unsub);
+};
+
 /* ---------- PRESENCE ---------- */
 set(ref(db, `presence/${room}/${user.username}`), true);
-window.addEventListener("beforeunload", () =>
-  remove(ref(db, `presence/${room}/${user.username}`))
-);
 
-/* ---------- INFO PANEL + ADMIN UI ---------- */
+/* ---------- CLEANUP ---------- */
+function cleanup() {
+  unsubscribers.forEach(u => u());
+  remove(ref(db, `presence/${room}/${user.username}`));
+}
+
+window.addEventListener("beforeunload", cleanup);
+window.leaveRoom = () => {
+  cleanup();
+  location.href = "dashboard.html";
+};
+
+/* ---------- INFO PANEL ---------- */
 const inside = document.getElementById("inside-list");
 const muted = document.getElementById("muted-list");
 const banned = document.getElementById("banned-list");
 
-onValue(ref(db, `presence/${room}`), snap => {
+listen(ref(db, `presence/${room}`), snap => {
   inside.innerHTML = "";
   snap.forEach(u => {
     const li = document.createElement("li");
@@ -65,29 +91,43 @@ onValue(ref(db, `presence/${room}`), snap => {
   });
 });
 
-onValue(ref(db, `roomMutes/${room}`), snap => {
+/* ---------- MUTES (NON-LIVE) ---------- */
+async function refreshMutes() {
+  const snap = await get(ref(db, `roomMutes/${room}`));
   muted.innerHTML = "";
   snap.forEach(u => {
     const li = document.createElement("li");
     li.textContent = u.key;
-
     if (can("unmute")) addBtn(li, "🔊", () => unmute(u.key));
     muted.appendChild(li);
   });
-});
+}
 
-onValue(ref(db, `roomBans/${room}`), snap => {
+setInterval(refreshMutes, 30000);
+refreshMutes();
+
+/* ---------- BANS (NON-LIVE) ---------- */
+async function refreshBans() {
+  const snap = await get(ref(db, `roomBans/${room}`));
   banned.innerHTML = "";
   snap.forEach(u => {
     const li = document.createElement("li");
     li.textContent = u.key;
-
     if (can("unban")) addBtn(li, "✅", () => unban(u.key));
     banned.appendChild(li);
   });
-});
 
-/* ---------- BUTTON HELPER ---------- */
+  if (snap.hasChild(user.username)) {
+    alert("You are banned");
+    cleanup();
+    location.href = "dashboard.html";
+  }
+}
+
+setInterval(refreshBans, 30000);
+refreshBans();
+
+/* ---------- ADMIN HELPERS ---------- */
 function addBtn(parent, text, fn) {
   const b = document.createElement("button");
   b.textContent = text;
@@ -95,7 +135,14 @@ function addBtn(parent, text, fn) {
   parent.appendChild(b);
 }
 
-/* ---------- COMMAND ACTIONS ---------- */
+function system(text) {
+  push(ref(db, `messages/${room}`), {
+    system: true,
+    text,
+    time: Date.now()
+  });
+}
+
 async function kick(target) {
   if (!can("kick")) return;
   await remove(ref(db, `presence/${room}/${target}`));
@@ -119,33 +166,14 @@ async function ban(target) {
 }
 
 async function unmute(target) {
-  if (!can("unmute")) return;
   await remove(ref(db, `roomMutes/${room}/${target}`));
   system(`🔊 ${target} unmuted`);
 }
 
 async function unban(target) {
-  if (!can("unban")) return;
   await remove(ref(db, `roomBans/${room}/${target}`));
   system(`✅ ${target} unbanned`);
 }
-
-/* ---------- AUTO UNMUTE ---------- */
-setInterval(async () => {
-  const snap = await get(ref(db, `roomMutes/${room}`));
-  snap.forEach(u => {
-    if (Date.now() > u.val().until)
-      remove(ref(db, `roomMutes/${room}/${u.key}`));
-  });
-}, 30000);
-
-/* ---------- BAN ENFORCEMENT ---------- */
-onValue(ref(db, `roomBans/${room}`), snap => {
-  if (snap.hasChild(user.username)) {
-    alert("You are banned");
-    location.href = "dashboard.html";
-  }
-});
 
 /* ---------- SEND ---------- */
 const input = document.getElementById("msg-input");
@@ -162,7 +190,12 @@ window.sendMessage = async () => {
   }
 
   if (text.startsWith("?/")) {
-    await handleCommand(text);
+    const [cmd, target] = text.slice(2).split(" ");
+    if (cmd && target && can(cmd)) {
+      ({ kick, mute, ban, unmute, unban }[cmd])?.(target);
+    } else {
+      system("❌ No permission");
+    }
     input.value = "";
     return;
   }
@@ -181,34 +214,13 @@ window.sendMessage = async () => {
   input.value = "";
 };
 
-/* ---------- TEXT COMMANDS ---------- */
-async function handleCommand(text) {
-  const [cmd, target, arg] = text.slice(2).split(" ");
-  if (!can(cmd)) return system("❌ No permission");
+/* ---------- MESSAGES (LIMITED + LIVE) ---------- */
+const msgRef = query(
+  ref(db, `messages/${room}`),
+  limitToLast(100)
+);
 
-  if (cmd === "kick") return kick(target);
-  if (cmd === "mute") {
-    await set(ref(db, `roomMutes/${room}/${target}`), {
-      until: Date.now() + (Number(arg || 5) * 60000)
-    });
-    return system(`🔇 ${target} muted`);
-  }
-  if (cmd === "ban") return ban(target);
-  if (cmd === "unmute") return unmute(target);
-  if (cmd === "unban") return unban(target);
-}
-
-/* ---------- SYSTEM MESSAGE ---------- */
-function system(text) {
-  push(ref(db, `messages/${room}`), {
-    system: true,
-    text,
-    time: Date.now()
-  });
-}
-
-/* ---------- RENDER ---------- */
-onValue(ref(db, `messages/${room}`), snap => {
+listen(msgRef, snap => {
   const box = document.getElementById("messages");
   box.innerHTML = "";
 
@@ -222,6 +234,3 @@ onValue(ref(db, `messages/${room}`), snap => {
 
   box.scrollTop = box.scrollHeight;
 });
-
-/* ---------- LEAVE ---------- */
-window.leaveRoom = () => location.href = "dashboard.html";
