@@ -79,7 +79,11 @@ window.logout = () => {
 };
 
 /* ---------- SAFE AUTH CHECK ---------- */
-if (!window.currentUser && !location.pathname.endsWith("index.html")) {
+const openPaths = new Set(["/", "/index.html"]);
+const currentPath = location.pathname || "/";
+const isLoginPage = openPaths.has(currentPath) || currentPath.endsWith("/index.html");
+
+if (!window.currentUser && !isLoginPage) {
   alert("Session expired");
   location.replace("index.html");
 }
